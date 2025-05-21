@@ -28,7 +28,7 @@ class BudgetPeriod {
     actualAmount += amount;
   }
 
-  void editBudgetedAmount(double amount) {
+  void setBudgetedAmount(double amount) {
     budgetedAmount = amount;
   }
 }

@@ -64,7 +64,61 @@ class _BudgetScreenState extends State<BudgetScreen> {
     });
   }
 
-  Future<void> _showAddCategoryDialog(Types type) async {}
+  Future<void> _showAddCategoryDialog(Types type) async {
+    _newCategoryName = null;
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Add New ${type.name} Category'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: ListBody(
+                children: <Widget>[
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      hintText: 'Enter category name',
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a category name';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _newCategoryName = value;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Add'),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  if (_newCategoryName != null) {
+                    _addCategory(type, _newCategoryName!);
+                  }
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Widget _buildCategorySection({
     required String title,

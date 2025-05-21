@@ -13,7 +13,7 @@ class NavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context).extension<FinancialThemeExtension>();
+    final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
 
     const List<BottomNavigationBarItem> navItems = [
       BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Dashboard'),

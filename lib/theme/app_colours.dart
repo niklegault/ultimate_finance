@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
+class AppColours {
   // Main theme colours
   static const Color backgroundLight = Colors.white;
   static const Color backgroundDark = Colors.black;

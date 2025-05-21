@@ -73,13 +73,13 @@ class AppTheme {
     brightness: Brightness.light,
     extensions: const <ThemeExtension<dynamic>>[
       FinancialThemeExtension(
-        background: AppColors.backgroundLight,
-        unselectedIcon: AppColors.unselectedIcon,
-        selectedIcon: AppColors.selectedIconLight,
-        income: AppColors.income,
-        expense: AppColors.expense,
-        savings: AppColors.savings,
-        investment: AppColors.investment,
+        background: AppColours.backgroundLight,
+        unselectedIcon: AppColours.unselectedIcon,
+        selectedIcon: AppColours.selectedIconLight,
+        income: AppColours.income,
+        expense: AppColours.expense,
+        savings: AppColours.savings,
+        investment: AppColours.investment,
       ),
     ],
   );
@@ -90,13 +90,13 @@ class AppTheme {
     brightness: Brightness.dark,
     extensions: const <ThemeExtension<dynamic>>[
       FinancialThemeExtension(
-        background: AppColors.backgroundDark,
-        unselectedIcon: AppColors.unselectedIcon,
-        selectedIcon: AppColors.selectedIconDark,
-        income: AppColors.income,
-        expense: AppColors.expense,
-        savings: AppColors.savings,
-        investment: AppColors.investment,
+        background: AppColours.backgroundDark,
+        unselectedIcon: AppColours.unselectedIcon,
+        selectedIcon: AppColours.selectedIconDark,
+        income: AppColours.income,
+        expense: AppColours.expense,
+        savings: AppColours.savings,
+        investment: AppColours.investment,
       ),
     ],
   );

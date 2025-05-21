@@ -5,12 +5,6 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Dashboard Screen',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Scaffold(
-        body: Center(child: const Text('Welcome to the Dashboard Screen!')),
-      ),
-    );
+    return const Center(child: Text('Welcome to the Dashboard Screen!'));
   }
 }

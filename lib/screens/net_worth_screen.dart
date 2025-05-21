@@ -5,12 +5,6 @@ class NetWorthScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Net Worth Screen',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Scaffold(
-        body: Center(child: const Text('Welcome to the Net Worth Screen!')),
-      ),
-    );
+    return const Center(child: Text('Welcome to the Net Worth Screen!'));
   }
 }

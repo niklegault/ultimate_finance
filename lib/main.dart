@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ultimate_finance/screens/home_screen.dart';
+import 'package:ultimate_finance/theme/app_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,8 +13,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Ultimate Finance',
-      theme: ThemeData(primarySwatch: Colors.green),
-      darkTheme: ThemeData.dark(),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       home: const HomeScreen(),
     );

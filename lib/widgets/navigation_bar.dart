@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ultimate_finance/theme/app_theme.dart';
 
 class NavigationBar extends StatelessWidget {
   final int currentIndex;
@@ -12,6 +13,8 @@ class NavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<FinancialThemeExtension>();
+
     const List<BottomNavigationBarItem> navItems = [
       BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Dashboard'),
       BottomNavigationBarItem(icon: Icon(Icons.money), label: 'Tracking'),
@@ -34,8 +37,8 @@ class NavigationBar extends StatelessWidget {
       items: navItems,
       currentIndex: currentIndex,
       onTap: onTap,
-      selectedItemColor: const Color.fromARGB(255, 2, 129, 23),
-      unselectedItemColor: Colors.grey,
+      selectedItemColor: theme?.selectedIcon ?? Colors.lightGreen,
+      unselectedItemColor: theme?.unselectedIcon ?? Colors.white,
     );
   }
 }

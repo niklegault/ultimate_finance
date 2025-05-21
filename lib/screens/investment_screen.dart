@@ -5,12 +5,6 @@ class InvestmentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Investment Screen',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Scaffold(
-        body: Center(child: const Text('Welcome to the Investment Screen!')),
-      ),
-    );
+    return const Center(child: Text('Welcome to the Investment Screen!'));
   }
 }

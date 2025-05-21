@@ -36,16 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ultimate Finance',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Ultimate Finance')),
-        body: IndexedStack(index: _selectedIndex, children: _widgetOptions),
-        bottomNavigationBar: custom.NavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-        ),
+    return Scaffold(
+      body: IndexedStack(index: _selectedIndex, children: _widgetOptions),
+      bottomNavigationBar: custom.NavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
       ),
     );
   }

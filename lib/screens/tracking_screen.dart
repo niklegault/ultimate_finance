@@ -5,12 +5,6 @@ class TrackingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tracking Screen',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Scaffold(
-        body: Center(child: const Text('Welcome to the Tracking Screen!')),
-      ),
-    );
+    return const Center(child: Text('Welcome to the Tracking Screen!'));
   }
 }

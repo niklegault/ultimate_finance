@@ -5,12 +5,6 @@ class AccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Account Screen',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Scaffold(
-        body: Center(child: const Text('Welcome to the Account Screen!')),
-      ),
-    );
+    return const Center(child: Text('Welcome to the Account Screen!'));
   }
 }

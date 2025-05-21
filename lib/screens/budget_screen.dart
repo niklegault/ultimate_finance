@@ -5,12 +5,6 @@ class BudgetScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Budget Screen',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: Scaffold(
-        body: Center(child: const Text('Welcome to the Budget Screen!')),
-      ),
-    );
+    return const Center(child: Text('Welcome to the Budget Screen!'));
   }
 }

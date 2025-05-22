@@ -24,6 +24,8 @@ class BudgetScreen extends StatefulWidget {
 }
 
 class _BudgetScreenState extends State<BudgetScreen> {
+  DateTime? _currentPeriod;
+
   late List<BudgetCategory> _incomeCategories;
   late List<BudgetCategory> _expenseCategories;
   late List<BudgetCategory> _savingCategories;
@@ -36,7 +38,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   void initState() {
     super.initState();
+    _currentPeriod = null;
     _filterCategorioes();
+  }
+
+  void _handlePeriodChange(DateTime? newPeriod) {
+    setState(() {
+      _currentPeriod = newPeriod;
+    });
   }
 
   void _filterCategorioes() {
@@ -189,8 +198,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: PeriodSelector(
-            selectedPeriod: null,
-            onPeriodChanged: (period) {},
+            selectedPeriod: _currentPeriod,
+            onPeriodChanged: _handlePeriodChange,
           ),
         ),
         const Divider(height: 1),

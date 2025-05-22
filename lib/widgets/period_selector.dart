@@ -20,24 +20,28 @@ class PeriodSelector extends StatelessWidget {
 
   void _previousMonth() {
     DateTime newPeriod;
-    if (selectedPeriod == null) {
-      final now = DateTime.now();
-      newPeriod = DateTime(now.year, now.month - 1);
+    final now = DateTime.now();
+    DateTime referenceDate = selectedPeriod ?? DateTime(now.year, now.month, 1);
+    newPeriod = DateTime(referenceDate.year, referenceDate.month - 1, 1);
+
+    if (newPeriod.year == now.year && newPeriod.month == now.month) {
+      onPeriodChanged(null);
     } else {
-      newPeriod = DateTime(selectedPeriod!.year, selectedPeriod!.month - 1);
+      onPeriodChanged(newPeriod);
     }
-    onPeriodChanged(newPeriod);
   }
 
   void _nextMonth() {
     DateTime newPeriod;
-    if (selectedPeriod == null) {
-      final now = DateTime.now();
-      newPeriod = DateTime(now.year, now.month + 1);
+    final now = DateTime.now();
+    DateTime referenceDate = selectedPeriod ?? DateTime(now.year, now.month, 1);
+    newPeriod = DateTime(referenceDate.year, referenceDate.month + 1, 1);
+
+    if (newPeriod.year == now.year && newPeriod.month == now.month) {
+      onPeriodChanged(null);
     } else {
-      newPeriod = DateTime(selectedPeriod!.year, selectedPeriod!.month + 1);
+      onPeriodChanged(newPeriod);
     }
-    onPeriodChanged(newPeriod);
   }
 
   Future<void> _selectPeriod(BuildContext context) async {
@@ -87,7 +91,7 @@ class PeriodSelector extends StatelessWidget {
         TextButton(
           onPressed: () => _selectPeriod(context),
           child: Text(
-            _displayMonthYear(selectedPeriod),
+            displayPeriod,
             style: TextStyle(
               fontSize: 16,
               color: Theme.of(context).colorScheme.primary,

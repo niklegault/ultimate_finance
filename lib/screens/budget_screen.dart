@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ultimate_finance/models/budget_category.dart';
 import 'package:ultimate_finance/models/types.dart';
 import 'package:ultimate_finance/theme/app_theme.dart';
+import 'package:ultimate_finance/widgets/period_selector.dart';
 
 // Dummy categories
 List<BudgetCategory> _allBudgetCategories = [
@@ -183,32 +184,46 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
 
-    return ListView(
-      padding: const EdgeInsets.all(8.0),
-      children: <Widget>[
-        _buildCategorySection(
-          title: 'Income',
-          categories: _incomeCategories,
-          type: Types.income,
-          sectionColour: theme.income,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: PeriodSelector(
+            selectedPeriod: null,
+            onPeriodChanged: (period) {},
+          ),
         ),
-        _buildCategorySection(
-          title: 'Expenses',
-          categories: _expenseCategories,
-          type: Types.expense,
-          sectionColour: theme.expense,
-        ),
-        _buildCategorySection(
-          title: 'Savings',
-          categories: _savingCategories,
-          type: Types.saving,
-          sectionColour: theme.savings,
-        ),
-        _buildCategorySection(
-          title: 'Investments',
-          categories: _investmentCategories,
-          type: Types.investment,
-          sectionColour: theme.investment,
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(8.0),
+            children: <Widget>[
+              _buildCategorySection(
+                title: 'Income',
+                categories: _incomeCategories,
+                type: Types.income,
+                sectionColour: theme.income,
+              ),
+              _buildCategorySection(
+                title: 'Expenses',
+                categories: _expenseCategories,
+                type: Types.expense,
+                sectionColour: theme.expense,
+              ),
+              _buildCategorySection(
+                title: 'Savings',
+                categories: _savingCategories,
+                type: Types.saving,
+                sectionColour: theme.savings,
+              ),
+              _buildCategorySection(
+                title: 'Investments',
+                categories: _investmentCategories,
+                type: Types.investment,
+                sectionColour: theme.investment,
+              ),
+            ],
+          ),
         ),
       ],
     );

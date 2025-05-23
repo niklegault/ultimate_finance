@@ -27,13 +27,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
   DateTime? _currentPeriod;
 
   late List<BudgetCategory> _incomeCategories;
+  late double _totalIncome;
   late List<BudgetCategory> _expenseCategories;
+  late double _totalExpenses;
   late List<BudgetCategory> _savingCategories;
+  late double _totalSavings;
   late List<BudgetCategory> _investmentCategories;
+  late double _totalInvestments;
 
   // Controller for Adding a new category
   final _formKey = GlobalKey<FormState>();
   String? _newCategoryName;
+  double? _budgetedAmount;
 
   @override
   void initState() {
@@ -67,15 +72,57 @@ class _BudgetScreenState extends State<BudgetScreen> {
             .toList();
   }
 
-  void _addCategory(Types type, String name) {
+  void _calculateTotals() {
+    _totalIncome = _incomeCategories.fold(
+      0.0,
+      (sum, category) =>
+          sum +
+          (category
+                  .getPeriod(_currentPeriod ?? DateTime.now())
+                  ?.budgetedAmount ??
+              0.0),
+    );
+    _totalExpenses = _expenseCategories.fold(
+      0.0,
+      (sum, category) =>
+          sum +
+          (category
+                  .getPeriod(_currentPeriod ?? DateTime.now())
+                  ?.budgetedAmount ??
+              0.0),
+    );
+    _totalSavings = _savingCategories.fold(
+      0.0,
+      (sum, category) =>
+          sum +
+          (category
+                  .getPeriod(_currentPeriod ?? DateTime.now())
+                  ?.budgetedAmount ??
+              0.0),
+    );
+    _totalInvestments = _investmentCategories.fold(
+      0.0,
+      (sum, category) =>
+          sum +
+          (category
+                  .getPeriod(_currentPeriod ?? DateTime.now())
+                  ?.budgetedAmount ??
+              0.0),
+    );
+  }
+
+  BudgetCategory _addCategory(Types type, String name) {
+    BudgetCategory newCategory = BudgetCategory(name: name, type: type);
     setState(() {
-      _allBudgetCategories.add(BudgetCategory(name: name, type: type));
+      _allBudgetCategories.add(newCategory);
       _filterCategorioes();
     });
+    return newCategory;
   }
 
   Future<void> _showAddCategoryDialog(Types type) async {
     _newCategoryName = null;
+    _budgetedAmount = 0.0;
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -101,6 +148,20 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       _newCategoryName = value;
                     },
                   ),
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      hintText: 'Enter budgeted amount',
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a budgeted amount';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _budgetedAmount = double.tryParse(value!);
+                    },
+                  ),
                 ],
               ),
             ),
@@ -118,7 +179,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 if (_formKey.currentState!.validate()) {
                   _formKey.currentState!.save();
                   if (_newCategoryName != null) {
-                    _addCategory(type, _newCategoryName!);
+                    var addedCategory = _addCategory(type, _newCategoryName!);
+                    addedCategory.addPeriod(
+                      _currentPeriod ?? DateTime.now(),
+                      _budgetedAmount ?? 0.0,
+                    );
                   }
                   Navigator.of(context).pop();
                 }
@@ -159,7 +224,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ),
         ),
         trailing: Text(
-          '\$ 1000.00', // Placeholder for total amount
+          '\$ ${type == Types.income
+              ? _totalIncome
+              : type == Types.expense
+              ? _totalExpenses
+              : type == Types.saving
+              ? _totalSavings
+              : _totalInvestments}',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
@@ -175,7 +246,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 print('Tapped on ${category.name}');
               },
               trailing: Text(
-                '\$ 500.00', // Placeholder for category amount
+                '\$ ${category.getPeriod(_currentPeriod ?? DateTime.now())?.budgetedAmount ?? '0.00'}',
                 style: TextStyle(fontSize: 16),
               ),
             ),
@@ -199,6 +270,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
+    _calculateTotals();
 
     return Column(
       children: [

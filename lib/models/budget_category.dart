@@ -11,6 +11,21 @@ class BudgetCategory {
     periods = List<BudgetPeriod>.empty(growable: true);
   }
 
+  void addPeriod(DateTime period, double budgetedAmount) {
+    periods.add(BudgetPeriod(period: period, budgetedAmount: budgetedAmount));
+  }
+
+  BudgetPeriod? getPeriod(DateTime period) {
+    return periods.firstWhere(
+      (p) => p.period.year == period.year && p.period.month == period.month,
+      orElse: () {
+        var newPeriod = BudgetPeriod(period: period, budgetedAmount: 0.0);
+        periods.add(newPeriod);
+        return newPeriod;
+      },
+    );
+  }
+
   @override
   String toString() {
     return 'BudgetCategory{name: $name}';
@@ -28,7 +43,7 @@ class BudgetPeriod {
     actualAmount += amount;
   }
 
-  void editBudgetedAmount(double amount) {
+  void setBudgetedAmount(double amount) {
     budgetedAmount = amount;
   }
 }

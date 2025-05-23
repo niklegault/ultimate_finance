@@ -24,6 +24,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   late double _totalSavings;
   late List<BudgetCategory> _investmentCategories;
   late double _totalInvestments;
+  late double _unallocatedIncome;
 
   // Controller for Adding a new category
   final _formKey = GlobalKey<FormState>();
@@ -99,6 +100,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ?.budgetedAmount ??
               0.0),
     );
+    _unallocatedIncome =
+        _totalIncome - _totalExpenses - _totalSavings - _totalInvestments;
   }
 
   BudgetCategory _addCategory(Types type, String name) {
@@ -178,19 +181,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     updatedCategory
                         .getPeriod(_currentPeriod ?? DateTime.now())
                         ?.setBudgetedAmount(updatedBudgetedAmount ?? 0.00);
-                    //if (updatedCategory.getPeriod(
-                    //      _currentPeriod ?? DateTime.now(),
-                    //    ) ==
-                    //    null) {
-                    //  updatedCategory
-                    //      .getPeriod(_currentPeriod ?? DateTime.now())
-                    //      ?.setBudgetedAmount(updatedBudgetedAmount ?? 0.00);
-                    //} else {
-                    //  updatedCategory.addPeriod(
-                    //    _currentPeriod ?? DateTime.now(),
-                    //    updatedBudgetedAmount ?? 0.0,
-                    //  );
-                    //}
 
                     _allBudgetCategories.remove(category);
                     _allBudgetCategories.add(updatedCategory);
@@ -362,6 +352,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
           child: PeriodSelector(
             selectedPeriod: _currentPeriod,
             onPeriodChanged: _handlePeriodChange,
+          ),
+        ),
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+          child: Text(
+            _unallocatedIncome == 0
+                ? 'Budget is Balanced'
+                : _unallocatedIncome > 0
+                ? 'Unallocated Income: \$ ${_unallocatedIncome.abs()}'
+                : 'Overallocated Income: \$ ${_unallocatedIncome.abs()}',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: _unallocatedIncome == 0 ? theme.income : theme.expense,
+            ),
           ),
         ),
         const Divider(height: 1),

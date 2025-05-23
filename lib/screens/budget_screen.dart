@@ -196,7 +196,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.only(left: 8, right: 8, top: 48, bottom: 8),
           child: PeriodSelector(
             selectedPeriod: _currentPeriod,
             onPeriodChanged: _handlePeriodChange,

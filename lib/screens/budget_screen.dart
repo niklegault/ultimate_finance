@@ -139,6 +139,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     return Card(
       margin: const EdgeInsets.all(8.0),
       child: ExpansionTile(
+        initiallyExpanded: true,
         leading: Icon(
           type == Types.income
               ? Icons.account_balance
@@ -157,6 +158,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
             color: sectionColour,
           ),
         ),
+        trailing: Text(
+          '\$ 1000.00', // Placeholder for total amount
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: sectionColour,
+          ),
+        ),
         children: <Widget>[
           ...categories.map(
             (category) => ListTile(
@@ -165,11 +174,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 // TODO: Navigate to category detail or edit
                 print('Tapped on ${category.name}');
               },
-              trailing: IconButton(
-                icon: Icon(Icons.edit, size: 20, color: Colors.grey[600]),
-                onPressed: () {
-                  // TODO: Implement edit category
-                },
+              trailing: Text(
+                '\$ 500.00', // Placeholder for category amount
+                style: TextStyle(fontSize: 16),
               ),
             ),
           ),

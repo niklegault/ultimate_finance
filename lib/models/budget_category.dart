@@ -18,7 +18,11 @@ class BudgetCategory {
   BudgetPeriod? getPeriod(DateTime period) {
     return periods.firstWhere(
       (p) => p.period.year == period.year && p.period.month == period.month,
-      orElse: () => BudgetPeriod(period: DateTime.now(), budgetedAmount: 0.0),
+      orElse: () {
+        var newPeriod = BudgetPeriod(period: period, budgetedAmount: 0.0);
+        periods.add(newPeriod);
+        return newPeriod;
+      },
     );
   }
 

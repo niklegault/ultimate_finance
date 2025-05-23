@@ -4,17 +4,7 @@ import 'package:ultimate_finance/models/types.dart';
 import 'package:ultimate_finance/theme/app_theme.dart';
 import 'package:ultimate_finance/widgets/period_selector.dart';
 
-// Dummy categories
-List<BudgetCategory> _allBudgetCategories = [
-  BudgetCategory(name: 'Salary', type: Types.income),
-  BudgetCategory(name: 'Freelance', type: Types.income),
-  BudgetCategory(name: 'Rent', type: Types.expense),
-  BudgetCategory(name: 'Groceries', type: Types.expense),
-  BudgetCategory(name: 'Emergency Fund', type: Types.saving),
-  BudgetCategory(name: 'Vacation Fund', type: Types.saving),
-  BudgetCategory(name: 'Stocks', type: Types.investment),
-  BudgetCategory(name: 'Crypto', type: Types.investment),
-];
+List<BudgetCategory> _allBudgetCategories = [];
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -118,6 +108,101 @@ class _BudgetScreenState extends State<BudgetScreen> {
       _filterCategorioes();
     });
     return newCategory;
+  }
+
+  Future<void> _showEditCategoryDialog(BudgetCategory category) async {
+    String updateCategoryName = category.name;
+    double? updatedBudgetedAmount =
+        category.getPeriod(_currentPeriod ?? DateTime.now())?.budgetedAmount;
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit ${category.type.name} Category'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: ListBody(
+                children: <Widget>[
+                  TextFormField(
+                    initialValue: category.name,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter category name',
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a category name';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      updateCategoryName = value!;
+                    },
+                  ),
+                  TextFormField(
+                    initialValue: updatedBudgetedAmount?.toString() ?? '0.0',
+                    decoration: const InputDecoration(
+                      hintText: 'Enter budgeted amount',
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a budgeted amount';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      updatedBudgetedAmount = double.tryParse(value!);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Update'),
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() {
+                    var updatedCategory = category;
+                    updatedCategory.name = updateCategoryName;
+
+                    updatedCategory
+                        .getPeriod(_currentPeriod ?? DateTime.now())
+                        ?.setBudgetedAmount(updatedBudgetedAmount ?? 0.00);
+                    //if (updatedCategory.getPeriod(
+                    //      _currentPeriod ?? DateTime.now(),
+                    //    ) ==
+                    //    null) {
+                    //  updatedCategory
+                    //      .getPeriod(_currentPeriod ?? DateTime.now())
+                    //      ?.setBudgetedAmount(updatedBudgetedAmount ?? 0.00);
+                    //} else {
+                    //  updatedCategory.addPeriod(
+                    //    _currentPeriod ?? DateTime.now(),
+                    //    updatedBudgetedAmount ?? 0.0,
+                    //  );
+                    //}
+
+                    _allBudgetCategories.remove(category);
+                    _allBudgetCategories.add(updatedCategory);
+                  });
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _showAddCategoryDialog(Types type) async {
@@ -242,8 +327,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             (category) => ListTile(
               title: Text(category.name),
               onTap: () {
-                // TODO: Navigate to category detail or edit
-                print('Tapped on ${category.name}');
+                _showEditCategoryDialog(category);
               },
               trailing: Text(
                 '\$ ${category.getPeriod(_currentPeriod ?? DateTime.now())?.budgetedAmount ?? '0.00'}',
@@ -251,7 +335,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             ),
           ),
-          // "Add New Category" button for this section
           ListTile(
             leading: Icon(Icons.add, color: sectionColour),
             title: Text(

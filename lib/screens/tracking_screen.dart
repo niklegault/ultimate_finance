@@ -52,8 +52,15 @@ class _TrackingScreenState extends State<TrackingScreen> {
       children: [
         Row(
           children: [
-            InformationBox(label: "Tracked Records", content: "5"),
-            InformationBox(label: "Monthly Balance", content: "\$1500"),
+            Expanded(
+              child: InformationBox(label: "Tracked Records", content: "5"),
+            ),
+            Expanded(
+              child: InformationBox(
+                label: "Monthly Balance",
+                content: "\$1500",
+              ),
+            ),
           ],
         ),
       ],

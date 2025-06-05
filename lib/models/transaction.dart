@@ -6,13 +6,13 @@ class Transaction {
   Types type;
   BudgetCategory category;
   double amount;
-  String description;
+  String? description;
 
   Transaction({
     required this.date,
     required this.type,
     required this.category,
     required this.amount,
-    required this.description,
+    this.description,
   });
 }

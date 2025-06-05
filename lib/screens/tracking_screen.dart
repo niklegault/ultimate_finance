@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ultimate_finance/models/budget_category.dart';
+import 'package:ultimate_finance/models/transaction.dart';
 import 'package:ultimate_finance/models/types.dart';
 import 'package:ultimate_finance/theme/app_theme.dart';
 import 'package:ultimate_finance/widgets/information_box.dart';
@@ -10,6 +11,30 @@ List<BudgetCategory> _allBudgetCategories = [
   BudgetCategory(name: 'Savings Account', type: Types.saving),
   BudgetCategory(name: 'Stocks', type: Types.investment),
   BudgetCategory(name: 'Dining Out', type: Types.expense),
+];
+
+List<Transaction> _allTransactions = [
+  Transaction(
+    type: Types.income,
+    category: _allBudgetCategories[0],
+    amount: 5000.00,
+    date: DateTime.now(),
+    description: 'Monthly salary',
+  ),
+  Transaction(
+    type: Types.expense,
+    category: _allBudgetCategories[1],
+    amount: 200.00,
+    date: DateTime.now(),
+    description: 'Weekly groceries',
+  ),
+  Transaction(
+    type: Types.saving,
+    category: _allBudgetCategories[2],
+    amount: 300.00,
+    date: DateTime.now(),
+    description: 'Monthly savings deposit',
+  ),
 ];
 
 class TrackingScreen extends StatefulWidget {
@@ -57,19 +82,45 @@ class _TrackingScreenState extends State<TrackingScreen> {
             .toList();
   }
 
-  Widget _buildTrackedItem() {
+  Widget _buildTrackedItem(Transaction transaction) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
           children: [
-            Text("Tracked Item"),
-            const Divider(height: 1.0),
-            Text("Details about the tracked item go here."),
+            Text("Type: ${transaction.type.toString().split('.').last}"),
+            SizedBox(width: 8),
+            Text("Category: ${transaction.category.name}"),
+            SizedBox(width: 8),
+            Text("Amount: \$${transaction.amount.toStringAsFixed(2)}"),
+            SizedBox(width: 8),
+            Text(
+              "Date: ${transaction.date.year}-${transaction.date.month.toString().padLeft(2, '0')}-${transaction.date.day.toString().padLeft(2, '0')}",
+            ),
+            SizedBox(width: 8),
+            Text("Notes: ${transaction.description ?? 'None'}"),
           ],
         ),
       ),
     );
+  }
+
+  Transaction _addTransaction(
+    Types type,
+    BudgetCategory category,
+    double amount,
+    DateTime date, {
+    String notes = '',
+  }) {
+    final transaction = Transaction(
+      type: type,
+      category: category,
+      amount: amount,
+      date: date,
+      description: notes,
+    );
+    _allTransactions.add(transaction);
+    return transaction;
   }
 
   Future<void> _showAddItemDialog() {
@@ -218,14 +269,17 @@ class _TrackingScreenState extends State<TrackingScreen> {
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
                       _formKey.currentState!.save();
-                      // if (_newCategoryName != null) {
-                      //   var addedCategory = _addCategory(type, _newCategoryName!);
-                      //   addedCategory.addPeriod(
-                      //     _currentPeriod ?? DateTime.now(),
-                      //     _budgetedAmount ?? 0.0,
-                      //   );
+                      if (_itemType != null && _itemCategory != null) {
+                        _addTransaction(
+                          _itemType!,
+                          _itemCategory!,
+                          _amount,
+                          _date,
+                          notes: _notes,
+                        );
+                        Navigator.of(context).pop();
+                      }
                     }
-                    Navigator.of(context).pop();
                   },
                 ),
               ],
@@ -239,11 +293,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
   Widget _buildTrackedList() {
     return Column(
       children: [
-        _buildTrackedItem(),
-        _buildTrackedItem(),
-        _buildTrackedItem(),
-        _buildTrackedItem(),
-        _buildTrackedItem(),
+        ..._allTransactions.map(
+          (transaction) => _buildTrackedItem(transaction),
+        ),
         ListTile(
           leading: Icon(Icons.add),
           title: Text('Track New Item'),

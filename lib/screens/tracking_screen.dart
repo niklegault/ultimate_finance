@@ -84,25 +84,79 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   Widget _buildTrackedItem(Transaction transaction) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      elevation: 2,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: _getTypeColor(transaction.type),
+          child: Icon(_getTypeIcon(transaction.type), color: Colors.white),
+        ),
+        title: Text(
+          transaction.category.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Type: ${transaction.type.toString().split('.').last}"),
-            SizedBox(width: 8),
-            Text("Category: ${transaction.category.name}"),
-            SizedBox(width: 8),
-            Text("Amount: \$${transaction.amount.toStringAsFixed(2)}"),
-            SizedBox(width: 8),
             Text(
-              "Date: ${transaction.date.year}-${transaction.date.month.toString().padLeft(2, '0')}-${transaction.date.day.toString().padLeft(2, '0')}",
+              "${transaction.type.toString().split('.').last} • ${_formatDate(transaction.date)}",
+              style: const TextStyle(fontSize: 12),
             ),
-            SizedBox(width: 8),
-            Text("Notes: ${transaction.description ?? 'None'}"),
+            if (transaction.description != null &&
+                transaction.description!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  transaction.description!,
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ),
           ],
+        ),
+        trailing: Text(
+          "${transaction.type == Types.expense ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: _getTypeColor(transaction.type),
+            fontSize: 16,
+          ),
         ),
       ),
     );
+  }
+
+  // Helper to get color based on transaction type
+  Color _getTypeColor(Types type) {
+    final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
+    switch (type) {
+      case Types.income:
+        return theme.income;
+      case Types.expense:
+        return theme.expense;
+      case Types.saving:
+        return theme.savings;
+      case Types.investment:
+        return theme.investment;
+    }
+  }
+
+  // Helper to get icon based on transaction type
+  IconData _getTypeIcon(Types type) {
+    switch (type) {
+      case Types.income:
+        return Icons.account_balance;
+      case Types.expense:
+        return Icons.shopping_cart_checkout;
+      case Types.saving:
+        return Icons.savings;
+      case Types.investment:
+        return Icons.trending_up;
+    }
+  }
+
+  // Helper to format date
+  String _formatDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
   Transaction _addTransaction(

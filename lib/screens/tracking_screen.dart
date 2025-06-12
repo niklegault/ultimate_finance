@@ -45,11 +45,6 @@ class TrackingScreen extends StatefulWidget {
 }
 
 class _TrackingScreenState extends State<TrackingScreen> {
-  late List<BudgetCategory> _incomeCategories;
-  late List<BudgetCategory> _expenseCategories;
-  late List<BudgetCategory> _savingCategories;
-  late List<BudgetCategory> _investmentCategories;
-
   final _formKey = GlobalKey<FormState>();
   Types? _itemType;
   BudgetCategory? _itemCategory;
@@ -60,26 +55,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
   @override
   void initState() {
     super.initState();
-    _filterCategories();
-  }
-
-  void _filterCategories() {
-    _incomeCategories =
-        _allBudgetCategories
-            .where((category) => category.type == Types.income)
-            .toList();
-    _expenseCategories =
-        _allBudgetCategories
-            .where((category) => category.type == Types.expense)
-            .toList();
-    _savingCategories =
-        _allBudgetCategories
-            .where((category) => category.type == Types.saving)
-            .toList();
-    _investmentCategories =
-        _allBudgetCategories
-            .where((category) => category.type == Types.investment)
-            .toList();
   }
 
   Widget _buildTrackedItem(Transaction transaction) {
@@ -125,7 +100,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
     );
   }
 
-  // Helper to get color based on transaction type
   Color _getTypeColor(Types type) {
     final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
     switch (type) {
@@ -140,7 +114,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
-  // Helper to get icon based on transaction type
   IconData _getTypeIcon(Types type) {
     switch (type) {
       case Types.income:
@@ -154,7 +127,6 @@ class _TrackingScreenState extends State<TrackingScreen> {
     }
   }
 
-  // Helper to format date
   String _formatDate(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
@@ -177,6 +149,34 @@ class _TrackingScreenState extends State<TrackingScreen> {
       _allTransactions.add(transaction);
     });
     return transaction;
+  }
+
+  int get _monthlyTransactions {
+    final now = DateTime.now();
+    return _allTransactions
+        .where(
+          (transaction) =>
+              transaction.date.year == now.year &&
+              transaction.date.month == now.month,
+        )
+        .length;
+  }
+
+  double get _monthBalance {
+    final now = DateTime.now();
+    return _allTransactions
+        .where(
+          (transaction) =>
+              transaction.date.year == now.year &&
+              transaction.date.month == now.month,
+        )
+        .fold(0.0, (sum, transaction) {
+          if (transaction.type == Types.income) {
+            return sum + transaction.amount;
+          } else {
+            return sum - transaction.amount;
+          }
+        });
   }
 
   Future<void> _showAddItemDialog() {
@@ -365,14 +365,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
-
     return Column(
       children: [
         Row(
           children: [
-            InformationBox(label: "Tracked Records", content: "5"),
-            InformationBox(label: "Monthly Balance", content: "\$1500"),
+            InformationBox(
+              label: "Tracked Transactions (this month)",
+              content: "$_monthlyTransactions",
+            ),
+            InformationBox(
+              label: "Monthly Balance",
+              content: "${_monthBalance}",
+            ),
           ],
         ),
         _buildTrackedList(),

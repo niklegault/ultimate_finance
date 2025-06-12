@@ -13,29 +13,7 @@ List<BudgetCategory> _allBudgetCategories = [
   BudgetCategory(name: 'Dining Out', type: Types.expense),
 ];
 
-List<Transaction> _allTransactions = [
-  Transaction(
-    type: Types.income,
-    category: _allBudgetCategories[0],
-    amount: 5000.00,
-    date: DateTime.now(),
-    description: 'Monthly salary',
-  ),
-  Transaction(
-    type: Types.expense,
-    category: _allBudgetCategories[1],
-    amount: 200.00,
-    date: DateTime.now(),
-    description: 'Weekly groceries',
-  ),
-  Transaction(
-    type: Types.saving,
-    category: _allBudgetCategories[2],
-    amount: 300.00,
-    date: DateTime.now(),
-    description: 'Monthly savings deposit',
-  ),
-];
+List<Transaction> _allTransactions = [];
 
 class TrackingScreen extends StatefulWidget {
   const TrackingScreen({super.key});
@@ -58,46 +36,225 @@ class _TrackingScreenState extends State<TrackingScreen> {
   }
 
   Widget _buildTrackedItem(Transaction transaction) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-      elevation: 2,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _getTypeColor(transaction.type),
-          child: Icon(_getTypeIcon(transaction.type), color: Colors.white),
-        ),
-        title: Text(
-          transaction.category.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "${transaction.type.toString().split('.').last} • ${_formatDate(transaction.date)}",
-              style: const TextStyle(fontSize: 12),
-            ),
-            if (transaction.description != null &&
-                transaction.description!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: Text(
-                  transaction.description!,
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
-                ),
+    return GestureDetector(
+      onTap: () => _showEditItemDialog(transaction),
+      child: Card(
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        elevation: 2,
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: _getTypeColor(transaction.type),
+            child: Icon(_getTypeIcon(transaction.type), color: Colors.white),
+          ),
+          title: Text(
+            transaction.category.name,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "${transaction.type.toString().split('.').last} • ${_formatDate(transaction.date)}",
+                style: const TextStyle(fontSize: 12),
               ),
-          ],
-        ),
-        trailing: Text(
-          "${transaction.type == Types.expense ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: _getTypeColor(transaction.type),
-            fontSize: 16,
+              if (transaction.description != null &&
+                  transaction.description!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text(
+                    transaction.description!,
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                ),
+            ],
+          ),
+          trailing: Text(
+            "${transaction.type == Types.expense ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: _getTypeColor(transaction.type),
+              fontSize: 16,
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _showEditItemDialog(Transaction transaction) async {
+    Types? editType = transaction.type;
+    BudgetCategory? editCategory = transaction.category;
+    double editAmount = transaction.amount;
+    DateTime editDate = transaction.date;
+    String editNotes = transaction.description ?? '';
+
+    final editFormKey = GlobalKey<FormState>();
+
+    bool updated = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              title: Text('Edit Item'),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: editFormKey,
+                  child: ListBody(
+                    children: <Widget>[
+                      DropdownButtonFormField<Types>(
+                        decoration: const InputDecoration(
+                          hintText: 'Select item type',
+                        ),
+                        value: editType,
+                        items:
+                            Types.values.map((type) {
+                              return DropdownMenuItem<Types>(
+                                value: type,
+                                child: Text(type.toString().split('.').last),
+                              );
+                            }).toList(),
+                        onChanged: (Types? newValue) {
+                          setState(() {
+                            editType = newValue;
+                            editCategory = null;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select an item type';
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          editType = value;
+                        },
+                      ),
+                      DropdownButtonFormField<BudgetCategory>(
+                        decoration: const InputDecoration(
+                          hintText: 'Select category',
+                        ),
+                        value: editCategory,
+                        items:
+                            (editType == null
+                                    ? <BudgetCategory>[]
+                                    : _allBudgetCategories
+                                        .where((cat) => cat.type == editType)
+                                        .toList())
+                                .map((category) {
+                                  return DropdownMenuItem<BudgetCategory>(
+                                    value: category,
+                                    child: Text(category.name),
+                                  );
+                                })
+                                .toList(),
+                        onChanged: (BudgetCategory? newValue) {
+                          setState(() {
+                            editCategory = newValue;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a category';
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          editCategory = value;
+                        },
+                      ),
+                      TextFormField(
+                        initialValue: editAmount.toString(),
+                        decoration: const InputDecoration(
+                          hintText: 'Enter item amount',
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter item amount';
+                          }
+                          return null;
+                        },
+                        onSaved: (value) {
+                          editAmount = double.tryParse(value!) ?? 0.00;
+                        },
+                        keyboardType: TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: editDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (pickedDate != null) {
+                            setState(() {
+                              editDate = pickedDate;
+                            });
+                          }
+                        },
+                        child: AbsorbPointer(
+                          child: TextFormField(
+                            decoration: InputDecoration(
+                              hintText: 'Select date',
+                              suffixIcon: Icon(Icons.calendar_today),
+                            ),
+                            controller: TextEditingController(
+                              text:
+                                  "${editDate.year}-${editDate.month.toString().padLeft(2, '0')}-${editDate.day.toString().padLeft(2, '0')}",
+                            ),
+                          ),
+                        ),
+                      ),
+                      TextFormField(
+                        initialValue: editNotes,
+                        decoration: const InputDecoration(
+                          hintText: 'Enter notes (optional)',
+                        ),
+                        onSaved: (value) {
+                          editNotes = value ?? '';
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                TextButton(
+                  child: const Text('Save'),
+                  onPressed: () {
+                    if (editFormKey.currentState!.validate()) {
+                      editFormKey.currentState!.save();
+                      transaction.type = editType!;
+                      transaction.category = editCategory!;
+                      transaction.amount = editAmount;
+                      transaction.date = editDate;
+                      transaction.description = editNotes;
+                      updated = true;
+                      Navigator.of(context).pop();
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    if (updated) {
+      setState(() {});
+    }
   }
 
   Color _getTypeColor(Types type) {
@@ -347,19 +504,15 @@ class _TrackingScreenState extends State<TrackingScreen> {
   }
 
   Widget _buildTrackedList() {
-    return Column(
-      children: [
-        ..._allTransactions.map(
-          (transaction) => _buildTrackedItem(transaction),
-        ),
-        ListTile(
-          leading: Icon(Icons.add),
-          title: Text('Track New Item'),
-          onTap: () {
-            _showAddItemDialog();
-          },
-        ),
-      ],
+    return Expanded(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children:
+            [
+              ...List<Transaction>.from(_allTransactions)
+                ..sort((a, b) => b.date.compareTo(a.date)),
+            ].map((transaction) => _buildTrackedItem(transaction)).toList(),
+      ),
     );
   }
 
@@ -378,6 +531,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
               content: "${_monthBalance}",
             ),
           ],
+        ),
+        ListTile(
+          title: Icon(Icons.add),
+          onTap: () {
+            _showAddItemDialog();
+          },
         ),
         _buildTrackedList(),
       ],

@@ -173,7 +173,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
       date: date,
       description: notes,
     );
-    _allTransactions.add(transaction);
+    setState(() {
+      _allTransactions.add(transaction);
+    });
     return transaction;
   }
 

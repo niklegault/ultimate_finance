@@ -31,6 +31,11 @@ class DataRepository implements IDataRepository {
   }
 
   @override
+  Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount) {
+    return _localDataSource.updateBudgetPeriod(categoryId, period, budgetedAmount);
+  }
+
+  @override
   Stream<List<Transaction>> watchAllTransactions() {
     return _localDataSource.watchAllTransactions();
   }

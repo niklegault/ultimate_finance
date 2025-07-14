@@ -34,7 +34,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 
   Future<void> _updateBudgetedAmount(int categoryId, double amount) async {
-    await dataRepository.addBudgetPeriod(categoryId, _currentPeriod, amount);
+    await dataRepository.updateBudgetPeriod(categoryId, _currentPeriod, amount);
   }
 
   // --- Dialogs ---

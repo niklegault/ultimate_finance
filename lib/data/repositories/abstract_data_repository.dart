@@ -8,6 +8,7 @@ abstract class IDataRepository {
 
   Stream<List<BudgetPeriod>> watchAllBudgetPeriods();
   Future<void> addBudgetPeriod(int categoryId, DateTime period, double budgetedAmount);
+  Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount);
 
   Stream<List<Transaction>> watchAllTransactions();
   Future<void> addTransaction({

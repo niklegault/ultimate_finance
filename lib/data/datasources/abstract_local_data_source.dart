@@ -17,6 +17,7 @@ abstract class ILocalDataSource {
     required double amount,
     String? description,
   });
+  Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount);
   Future<void> updateTransaction(Transaction transaction);
   Future<void> deleteTransaction(int id);
 

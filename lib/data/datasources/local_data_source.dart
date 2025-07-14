@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
@@ -26,6 +25,11 @@ class BudgetPeriods extends Table {
   IntColumn get categoryId => integer().references(BudgetCategories, #id)();
   DateTimeColumn get period => dateTime()();
   RealColumn get budgetedAmount => real()();
+
+  @override
+  List<String> get customConstraints => [
+        'UNIQUE(categoryId, period)',
+      ];
 }
 
 @UseRowClass(Transaction)
@@ -66,6 +70,10 @@ class BudgetDao extends DatabaseAccessor<LocalDatabase> with _$BudgetDaoMixin {
         budgetedAmount: budgetedAmount,
       ),
     );
+  }
+
+  Future<void> updateBudgetPeriod(BudgetPeriod budgetPeriod) {
+    return into(budgetPeriods).insertOnConflictUpdate(budgetPeriod.toCompanion(true));
   }
 }
 
@@ -120,7 +128,7 @@ class LocalDatabase extends _$LocalDatabase implements ILocalDataSource {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   Stream<List<BudgetCategory>> watchAllBudgetCategories() {
@@ -140,6 +148,18 @@ class LocalDatabase extends _$LocalDatabase implements ILocalDataSource {
   @override
   Future<void> addBudgetPeriod(int categoryId, DateTime period, double budgetedAmount) {
     return budgetDao.addBudgetPeriod(categoryId, period, budgetedAmount); 
+  }
+
+  @override
+  Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount) {
+    final startOfMonth = DateTime(period.year, period.month, 1);
+    final budgetPeriod = BudgetPeriod(
+      id: -1,
+      categoryId: categoryId,
+      period: startOfMonth,
+      budgetedAmount: budgetedAmount,
+    );
+    return budgetDao.updateBudgetPeriod(budgetPeriod);
   }
 
   @override
@@ -172,6 +192,16 @@ class LocalDatabase extends _$LocalDatabase implements ILocalDataSource {
   @override
   Future<void> deleteTransaction(int id) {
     return transactionDao.deleteTransaction(id);
+  }
+}
+
+extension on BudgetPeriod {
+  BudgetPeriodsCompanion toCompanion(bool nullToAbsent) {
+    return BudgetPeriodsCompanion(
+      categoryId: Value(categoryId),
+      period: Value(period),
+      budgetedAmount: Value(budgetedAmount),
+    );
   }
 }
 

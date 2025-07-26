@@ -21,6 +21,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     setState(() {
       // Use the current month if null is passed, otherwise use the selected month.
       _currentPeriod = newPeriod ?? DateTime.now();
+      print('Selected period: $_currentPeriod');
     });
   }
 
@@ -162,7 +163,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               
               // This nested StreamBuilder gets the budgeted amounts for the selected month.
               return StreamBuilder<List<BudgetPeriod>>(
-                stream: dataRepository.watchAllBudgetPeriods(),
+                stream: dataRepository.watchBudgetPeriodsForMonth(_currentPeriod),
                 builder: (context, amountsSnapshot) {
                   final budgetedAmounts = amountsSnapshot.data ?? [];
 

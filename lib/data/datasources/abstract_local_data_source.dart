@@ -6,8 +6,9 @@ abstract class ILocalDataSource {
   Stream<List<BudgetCategory>> watchAllBudgetCategories();
   Future<void> addBudgetCategory(String name, Types type);
 
-  Stream<List<BudgetPeriod>> watchAllBudgetPeriods();
-  Future<void> addBudgetPeriod(int categoryId, DateTime period, double budgetedAmount);
+  // This is the correct, efficient method for the UI
+  Stream<List<BudgetPeriod>> watchBudgetPeriodsForMonth(DateTime month);
+  Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount);
 
   Stream<List<Transaction>> watchAllTransactions();
   Future<void> addTransaction({
@@ -17,13 +18,6 @@ abstract class ILocalDataSource {
     required double amount,
     String? description,
   });
-  Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount);
   Future<void> updateTransaction(Transaction transaction);
   Future<void> deleteTransaction(int id);
-
-//   Stream<List<Account>> watchAllAccounts();
-//   Future<void> addAccount(String name, double initialBalance);
-
-//   Stream<List<AccountPeriod>> watchAllAccountPeriods();
-//   Future<void> addAccountPeriod(int accountId, DateTime period, double balance);
 }

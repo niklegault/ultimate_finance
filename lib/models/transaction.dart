@@ -1,13 +1,12 @@
-import 'package:ultimate_finance/models/budget_category.dart';
 import 'package:ultimate_finance/models/types.dart';
 
 class Transaction {
   final int id;
-  DateTime date;
-  Types type;
-  int categoryId;
-  double amount;
-  String? description;
+  final DateTime date;
+  final Types type;
+  final int categoryId;
+  final double amount;
+  final String? description;
 
   Transaction({
     required this.id,

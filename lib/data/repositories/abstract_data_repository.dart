@@ -6,8 +6,8 @@ abstract class IDataRepository {
   Stream<List<BudgetCategory>> watchAllBudgetCategories();
   Future<void> addBudgetCategory(String name, Types type);
 
-  Stream<List<BudgetPeriod>> watchAllBudgetPeriods();
-  Future<void> addBudgetPeriod(int categoryId, DateTime period, double budgetedAmount);
+  // This method now matches the data source and UI needs
+  Stream<List<BudgetPeriod>> watchBudgetPeriodsForMonth(DateTime month);
   Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount);
 
   Stream<List<Transaction>> watchAllTransactions();

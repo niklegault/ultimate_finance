@@ -9,6 +9,8 @@ mixin _$BudgetDaoMixin on DatabaseAccessor<LocalDatabase> {
   $BudgetPeriodsTable get budgetPeriods => attachedDatabase.budgetPeriods;
 }
 mixin _$TransactionDaoMixin on DatabaseAccessor<LocalDatabase> {
+  $BudgetCategoriesTable get budgetCategories =>
+      attachedDatabase.budgetCategories;
   $TransactionsTable get transactions => attachedDatabase.transactions;
 }
 
@@ -208,7 +210,7 @@ class $BudgetPeriodsTable extends BudgetPeriods
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES budget_categories (id)',
+      'REFERENCES budget_categories (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _periodMeta = const VerificationMeta('period');
@@ -396,7 +398,7 @@ class BudgetPeriodsCompanion extends UpdateCompanion<BudgetPeriod> {
 }
 
 class $TransactionsTable extends Transactions
-    with TableInfo<$TransactionsTable, Transaction> {
+    with TableInfo<$TransactionsTable, app_transaction.Transaction> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -442,6 +444,9 @@ class $TransactionsTable extends Transactions
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES budget_categories (id) ON DELETE SET NULL',
+    ),
   );
   static const VerificationMeta _amountMeta = const VerificationMeta('amount');
   @override
@@ -479,7 +484,7 @@ class $TransactionsTable extends Transactions
   static const String $name = 'transactions';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Transaction> instance, {
+    Insertable<app_transaction.Transaction> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -526,9 +531,12 @@ class $TransactionsTable extends Transactions
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Transaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+  app_transaction.Transaction map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Transaction(
+    return app_transaction.Transaction(
       id:
           attachedDatabase.typeMapping.read(
             DriftSqlType.int,
@@ -571,7 +579,8 @@ class $TransactionsTable extends Transactions
       EnumIndexConverter(Types.values);
 }
 
-class TransactionsCompanion extends UpdateCompanion<Transaction> {
+class TransactionsCompanion
+    extends UpdateCompanion<app_transaction.Transaction> {
   final Value<int> id;
   final Value<DateTime> date;
   final Value<Types> type;
@@ -597,7 +606,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
        type = Value(type),
        categoryId = Value(categoryId),
        amount = Value(amount);
-  static Insertable<Transaction> custom({
+  static Insertable<app_transaction.Transaction> custom({
     Expression<int>? id,
     Expression<DateTime>? date,
     Expression<int>? type,
@@ -694,6 +703,23 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     budgetPeriods,
     transactions,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'budget_categories',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('budget_periods', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'budget_categories',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('transactions', kind: UpdateKind.update)],
+    ),
+  ]);
 }
 
 typedef $$BudgetCategoriesTableCreateCompanionBuilder =
@@ -742,6 +768,30 @@ final class $$BudgetCategoriesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $TransactionsTable,
+    List<app_transaction.Transaction>
+  >
+  _transactionsRefsTable(_$LocalDatabase db) => MultiTypedResultKey.fromTable(
+    db.transactions,
+    aliasName: $_aliasNameGenerator(
+      db.budgetCategories.id,
+      db.transactions.categoryId,
+    ),
+  );
+
+  $$TransactionsTableProcessedTableManager get transactionsRefs {
+    final manager = $$TransactionsTableTableManager(
+      $_db,
+      $_db.transactions,
+    ).filter((f) => f.categoryId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_transactionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$BudgetCategoriesTableFilterComposer
@@ -785,6 +835,31 @@ class $$BudgetCategoriesTableFilterComposer
           }) => $$BudgetPeriodsTableFilterComposer(
             $db: $db,
             $table: $db.budgetPeriods,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> transactionsRefs(
+    Expression<bool> Function($$TransactionsTableFilterComposer f) f,
+  ) {
+    final $$TransactionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transactions,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionsTableFilterComposer(
+            $db: $db,
+            $table: $db.transactions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -862,6 +937,31 @@ class $$BudgetCategoriesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> transactionsRefs<T extends Object>(
+    Expression<T> Function($$TransactionsTableAnnotationComposer a) f,
+  ) {
+    final $$TransactionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.transactions,
+      getReferencedColumn: (t) => t.categoryId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TransactionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.transactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$BudgetCategoriesTableTableManager
@@ -877,7 +977,10 @@ class $$BudgetCategoriesTableTableManager
           $$BudgetCategoriesTableUpdateCompanionBuilder,
           (BudgetCategory, $$BudgetCategoriesTableReferences),
           BudgetCategory,
-          PrefetchHooks Function({bool budgetPeriodsRefs})
+          PrefetchHooks Function({
+            bool budgetPeriodsRefs,
+            bool transactionsRefs,
+          })
         > {
   $$BudgetCategoriesTableTableManager(
     _$LocalDatabase db,
@@ -925,11 +1028,15 @@ class $$BudgetCategoriesTableTableManager
                         ),
                       )
                       .toList(),
-          prefetchHooksCallback: ({budgetPeriodsRefs = false}) {
+          prefetchHooksCallback: ({
+            budgetPeriodsRefs = false,
+            transactionsRefs = false,
+          }) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (budgetPeriodsRefs) db.budgetPeriods,
+                if (transactionsRefs) db.transactions,
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -956,6 +1063,28 @@ class $$BudgetCategoriesTableTableManager
                           ),
                       typedResults: items,
                     ),
+                  if (transactionsRefs)
+                    await $_getPrefetchedData<
+                      BudgetCategory,
+                      $BudgetCategoriesTable,
+                      app_transaction.Transaction
+                    >(
+                      currentTable: table,
+                      referencedTable: $$BudgetCategoriesTableReferences
+                          ._transactionsRefsTable(db),
+                      managerFromTypedResult:
+                          (p0) =>
+                              $$BudgetCategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).transactionsRefs,
+                      referencedItemsForCurrentItem:
+                          (item, referencedItems) => referencedItems.where(
+                            (e) => e.categoryId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
                 ];
               },
             );
@@ -976,7 +1105,7 @@ typedef $$BudgetCategoriesTableProcessedTableManager =
       $$BudgetCategoriesTableUpdateCompanionBuilder,
       (BudgetCategory, $$BudgetCategoriesTableReferences),
       BudgetCategory,
-      PrefetchHooks Function({bool budgetPeriodsRefs})
+      PrefetchHooks Function({bool budgetPeriodsRefs, bool transactionsRefs})
     >;
 typedef $$BudgetPeriodsTableCreateCompanionBuilder =
     BudgetPeriodsCompanion Function({
@@ -1308,6 +1437,38 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> description,
     });
 
+final class $$TransactionsTableReferences
+    extends
+        BaseReferences<
+          _$LocalDatabase,
+          $TransactionsTable,
+          app_transaction.Transaction
+        > {
+  $$TransactionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $BudgetCategoriesTable _categoryIdTable(_$LocalDatabase db) =>
+      db.budgetCategories.createAlias(
+        $_aliasNameGenerator(
+          db.transactions.categoryId,
+          db.budgetCategories.id,
+        ),
+      );
+
+  $$BudgetCategoriesTableProcessedTableManager get categoryId {
+    final $_column = $_itemColumn<int>('category_id')!;
+
+    final manager = $$BudgetCategoriesTableTableManager(
+      $_db,
+      $_db.budgetCategories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
 class $$TransactionsTableFilterComposer
     extends Composer<_$LocalDatabase, $TransactionsTable> {
   $$TransactionsTableFilterComposer({
@@ -1333,11 +1494,6 @@ class $$TransactionsTableFilterComposer
         builder: (column) => ColumnWithTypeConverterFilters(column),
       );
 
-  ColumnFilters<int> get categoryId => $composableBuilder(
-    column: $table.categoryId,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<double> get amount => $composableBuilder(
     column: $table.amount,
     builder: (column) => ColumnFilters(column),
@@ -1347,6 +1503,29 @@ class $$TransactionsTableFilterComposer
     column: $table.description,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$BudgetCategoriesTableFilterComposer get categoryId {
+    final $$BudgetCategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.budgetCategories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BudgetCategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.budgetCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TransactionsTableOrderingComposer
@@ -1373,11 +1552,6 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get categoryId => $composableBuilder(
-    column: $table.categoryId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<double> get amount => $composableBuilder(
     column: $table.amount,
     builder: (column) => ColumnOrderings(column),
@@ -1387,6 +1561,29 @@ class $$TransactionsTableOrderingComposer
     column: $table.description,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$BudgetCategoriesTableOrderingComposer get categoryId {
+    final $$BudgetCategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.budgetCategories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BudgetCategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.budgetCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -1407,11 +1604,6 @@ class $$TransactionsTableAnnotationComposer
   GeneratedColumnWithTypeConverter<Types, int> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
 
-  GeneratedColumn<int> get categoryId => $composableBuilder(
-    column: $table.categoryId,
-    builder: (column) => column,
-  );
-
   GeneratedColumn<double> get amount =>
       $composableBuilder(column: $table.amount, builder: (column) => column);
 
@@ -1419,6 +1611,29 @@ class $$TransactionsTableAnnotationComposer
     column: $table.description,
     builder: (column) => column,
   );
+
+  $$BudgetCategoriesTableAnnotationComposer get categoryId {
+    final $$BudgetCategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.categoryId,
+      referencedTable: $db.budgetCategories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BudgetCategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.budgetCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TransactionsTableTableManager
@@ -1426,18 +1641,15 @@ class $$TransactionsTableTableManager
         RootTableManager<
           _$LocalDatabase,
           $TransactionsTable,
-          Transaction,
+          app_transaction.Transaction,
           $$TransactionsTableFilterComposer,
           $$TransactionsTableOrderingComposer,
           $$TransactionsTableAnnotationComposer,
           $$TransactionsTableCreateCompanionBuilder,
           $$TransactionsTableUpdateCompanionBuilder,
-          (
-            Transaction,
-            BaseReferences<_$LocalDatabase, $TransactionsTable, Transaction>,
-          ),
-          Transaction,
-          PrefetchHooks Function()
+          (app_transaction.Transaction, $$TransactionsTableReferences),
+          app_transaction.Transaction,
+          PrefetchHooks Function({bool categoryId})
         > {
   $$TransactionsTableTableManager(_$LocalDatabase db, $TransactionsTable table)
     : super(
@@ -1489,11 +1701,51 @@ class $$TransactionsTableTableManager
                       .map(
                         (e) => (
                           e.readTable(table),
-                          BaseReferences(db, table, e),
+                          $$TransactionsTableReferences(db, table, e),
                         ),
                       )
                       .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({categoryId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                T extends TableManagerState<
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic
+                >
+              >(state) {
+                if (categoryId) {
+                  state =
+                      state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.categoryId,
+                            referencedTable: $$TransactionsTableReferences
+                                ._categoryIdTable(db),
+                            referencedColumn:
+                                $$TransactionsTableReferences
+                                    ._categoryIdTable(db)
+                                    .id,
+                          )
+                          as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -1502,18 +1754,15 @@ typedef $$TransactionsTableProcessedTableManager =
     ProcessedTableManager<
       _$LocalDatabase,
       $TransactionsTable,
-      Transaction,
+      app_transaction.Transaction,
       $$TransactionsTableFilterComposer,
       $$TransactionsTableOrderingComposer,
       $$TransactionsTableAnnotationComposer,
       $$TransactionsTableCreateCompanionBuilder,
       $$TransactionsTableUpdateCompanionBuilder,
-      (
-        Transaction,
-        BaseReferences<_$LocalDatabase, $TransactionsTable, Transaction>,
-      ),
-      Transaction,
-      PrefetchHooks Function()
+      (app_transaction.Transaction, $$TransactionsTableReferences),
+      app_transaction.Transaction,
+      PrefetchHooks Function({bool categoryId})
     >;
 
 class $LocalDatabaseManager {

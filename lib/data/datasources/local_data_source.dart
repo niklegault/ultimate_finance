@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:ultimate_finance/models/budget_category.dart';
 import 'package:ultimate_finance/models/types.dart';
-import 'package:ultimate_finance/models/transaction.dart';
+import 'package:ultimate_finance/models/transaction.dart' as app_transaction;
 import 'abstract_local_data_source.dart';
 
 part 'local_data_source.g.dart';
@@ -22,103 +22,47 @@ class BudgetCategories extends Table {
 @UseRowClass(BudgetPeriod)
 class BudgetPeriods extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get categoryId => integer().references(BudgetCategories, #id)();
+  IntColumn get categoryId => integer().references(BudgetCategories, #id, onDelete: KeyAction.cascade)();
   DateTimeColumn get period => dateTime()();
   RealColumn get budgetedAmount => real()();
-
   @override
-  List<String> get customConstraints => [
-        'UNIQUE(categoryId, period)',
-      ];
+  List<String> get customConstraints => ['UNIQUE(category_id, period)'];
 }
 
-@UseRowClass(Transaction)
+@UseRowClass(app_transaction.Transaction)
 class Transactions extends Table {
   IntColumn get id => integer().autoIncrement()();
   DateTimeColumn get date => dateTime()();
   IntColumn get type => integer().map(EnumIndexConverter(Types.values))();
-  IntColumn get categoryId => integer()();
+  IntColumn get categoryId => integer().references(BudgetCategories, #id, onDelete: KeyAction.setNull)();
   RealColumn get amount => real()();
   TextColumn get description => text().nullable()();
 }
 
- // ======== DAOs ========
+// ======== DAOs ========
 
 @DriftAccessor(tables: [BudgetCategories, BudgetPeriods])
 class BudgetDao extends DatabaseAccessor<LocalDatabase> with _$BudgetDaoMixin {
   BudgetDao(super.db);
 
-  Stream<List<BudgetCategory>> watchAllBudgetCategories() {
-    return select(budgetCategories).watch();
+  Stream<List<BudgetCategory>> watchAllBudgetCategories() => select(budgetCategories).watch();
+  Future<void> addBudgetCategory(String name, Types type) => into(budgetCategories).insert(BudgetCategoriesCompanion.insert(name: name, type: type));
+
+  Stream<List<BudgetPeriod>> watchPeriodsForMonth(DateTime month) {
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    return (select(budgetPeriods)..where((tbl) => tbl.period.equals(startOfMonth))).watch();
   }
 
-  Future<void> addBudgetCategory(String name, Types type) {
-    return into(budgetCategories).insert(
-      BudgetCategoriesCompanion.insert(name: name, type: type),
-    );
-  }
-
-  Stream<List<BudgetPeriod>> watchAllBudgetPeriods() {
-    return select(budgetPeriods).watch();
-  }
-
-  Future<void> addBudgetPeriod(int categoryId, DateTime period, double budgetedAmount) {
-    return into(budgetPeriods).insert(
-      BudgetPeriodsCompanion.insert(
-        categoryId: categoryId,
-        period: period,
-        budgetedAmount: budgetedAmount,
-      ),
-    );
-  }
-
-  Future<void> updateBudgetPeriod(BudgetPeriod budgetPeriod) {
-    return into(budgetPeriods).insertOnConflictUpdate(budgetPeriod.toCompanion(true));
-  }
+  Future<void> updateBudgetPeriod(BudgetPeriod period) => into(budgetPeriods).insertOnConflictUpdate(period as Insertable<BudgetPeriod>);
 }
 
 @DriftAccessor(tables: [Transactions])
 class TransactionDao extends DatabaseAccessor<LocalDatabase> with _$TransactionDaoMixin {
   TransactionDao(super.db);
-
-  Stream<List<Transaction>> watchAllTransactions() {
-    return select(transactions).watch();
-  }
-
-  Future<void> addTransaction({
-    required DateTime date,
-    required Types type,
-    required int categoryId,
-    required double amount,
-    String? description,
-  }) {
-    return into(transactions).insert(
-      TransactionsCompanion.insert(
-        date: date,
-        type: type,
-        categoryId: categoryId,
-        amount: amount,
-        description: Value(description),
-      ),
-    );
-  }
-
-  Future<void> updateTransaction(Transaction transaction) {
-    return update(transactions).replace(
-      TransactionsCompanion(
-        id: Value(transaction.id),
-        date: Value(transaction.date),
-        type: Value(transaction.type),
-        categoryId: Value(transaction.categoryId),
-        amount: Value(transaction.amount),
-        description: Value(transaction.description),
-      ),
-    );
-  }
-
-  Future<void> deleteTransaction(int id) {
-    return (delete(transactions)..where((t) => t.id.equals(id))).go();
-  }
+  Stream<List<app_transaction.Transaction>> watchAllTransactions() => select(transactions).watch();
+  Future<void> addTransaction(TransactionsCompanion transaction) => into(transactions).insert(transaction);
+  Future<void> updateTransaction(app_transaction.Transaction transaction) => update(transactions).replace(transaction as Insertable<app_transaction.Transaction>);
+  Future<void> deleteTransaction(int id) => (delete(transactions)..where((t) => t.id.equals(id))).go();
 }
 
 // ======== Database ========
@@ -128,71 +72,47 @@ class LocalDatabase extends _$LocalDatabase implements ILocalDataSource {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 2; // Version 2 because you have multiple tables
 
+  // --- THIS IS THE CRITICAL FIX FOR THE LOADING SCREEN ---
   @override
-  Stream<List<BudgetCategory>> watchAllBudgetCategories() {
-    return budgetDao.watchAllBudgetCategories(); 
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) => m.createAll(), // Creates all tables on first launch
+      onUpgrade: (Migrator m, int from, int to) async {
+        // This runs only if a user already has an older version of the app
+        if (from == 1) {
+          await m.createTable(budgetPeriods);
+          await m.createTable(transactions);
+        }
+      },
+    );
   }
 
+  // --- ILocalDataSource Implementation ---
   @override
-  Future<void> addBudgetCategory(String name, Types type) {
-    return budgetDao.addBudgetCategory(name, type); 
-  }
-
+  Stream<List<BudgetCategory>> watchAllBudgetCategories() => budgetDao.watchAllBudgetCategories();
   @override
-  Stream<List<BudgetPeriod>> watchAllBudgetPeriods() {
-    return budgetDao.watchAllBudgetPeriods();
-  }
-
+  Future<void> addBudgetCategory(String name, Types type) => budgetDao.addBudgetCategory(name, type);
   @override
-  Future<void> addBudgetPeriod(int categoryId, DateTime period, double budgetedAmount) {
-    return budgetDao.addBudgetPeriod(categoryId, period, budgetedAmount); 
-  }
-
+  Stream<List<BudgetPeriod>> watchBudgetPeriodsForMonth(DateTime month) => budgetDao.watchPeriodsForMonth(month);
   @override
   Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount) {
     final startOfMonth = DateTime(period.year, period.month, 1);
-    final budgetPeriod = BudgetPeriod(
-      id: -1,
-      categoryId: categoryId,
-      period: startOfMonth,
-      budgetedAmount: budgetedAmount,
-    );
+    final budgetPeriod = BudgetPeriod(id: -1, categoryId: categoryId, period: startOfMonth, budgetedAmount: budgetedAmount);
     return budgetDao.updateBudgetPeriod(budgetPeriod);
   }
-
   @override
-  Stream<List<Transaction>> watchAllTransactions() {
-    return transactionDao.watchAllTransactions();
-  }
-
+  Stream<List<app_transaction.Transaction>> watchAllTransactions() => transactionDao.watchAllTransactions();
   @override
-  Future<void> addTransaction({
-    required DateTime date,
-    required Types type,
-    required int categoryId,
-    required double amount,
-    String? description,
-  }) {
-    return transactionDao.addTransaction(
-      date: date,
-      type: type,
-      categoryId: categoryId,
-      amount: amount,
-      description: description,
-    );
+  Future<void> addTransaction({required DateTime date, required Types type, required int categoryId, required double amount, String? description}) {
+    final companion = TransactionsCompanion.insert(date: date, type: type, categoryId: categoryId, amount: amount, description: Value(description));
+    return transactionDao.addTransaction(companion);
   }
-
   @override
-  Future<void> updateTransaction(Transaction transaction) {   
-    return transactionDao.updateTransaction(transaction); 
-  }
-
+  Future<void> updateTransaction(app_transaction.Transaction transaction) => transactionDao.updateTransaction(transaction);
   @override
-  Future<void> deleteTransaction(int id) {
-    return transactionDao.deleteTransaction(id);
-  }
+  Future<void> deleteTransaction(int id) => transactionDao.deleteTransaction(id);
 }
 
 extension on BudgetPeriod {

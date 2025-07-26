@@ -2,8 +2,8 @@ import 'package:ultimate_finance/models/types.dart';
 
 class Account {
   final int id;
-  String name;
-  Types type;
+  final String name;
+  final Types type;
 
   Account({
     required this.id,
@@ -15,10 +15,10 @@ class Account {
 class AccountPeriod {
   final int id;
   final DateTime period;
-  double balance;
-  double deposits;
-  double withdrawals;
-  double interest;
+  final double balance;
+  final double deposits;
+  final double withdrawals;
+  final double interest;
 
   AccountPeriod({
     required this.id,

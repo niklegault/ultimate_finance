@@ -54,7 +54,15 @@ class BudgetDao extends DatabaseAccessor<LocalDatabase> with _$BudgetDaoMixin {
     return (select(budgetPeriods)..where((tbl) => tbl.period.equals(startOfMonth))).watch();
   }
 
-  Future<void> updateBudgetPeriod(BudgetPeriod period) => into(budgetPeriods).insertOnConflictUpdate(period.toCompanion(true));
+  Future<void> updateBudgetPeriod(BudgetPeriod period) {
+    return into(budgetPeriods).insert(
+      period.toCompanion(true),
+      onConflict: DoUpdate(
+        (old) => BudgetPeriodsCompanion.custom(budgetedAmount: Variable(period.budgetedAmount)),
+        target: [budgetPeriods.categoryId, budgetPeriods.period],
+      ),
+    );
+  }
 }
 
 @DriftAccessor(tables: [Transactions])

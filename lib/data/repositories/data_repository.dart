@@ -16,7 +16,7 @@ class DataRepository implements IDataRepository {
   }
 
   @override
-  Future<void> addBudgetCategory(String name, Types type) {
+  Future<int> addBudgetCategory(String name, Types type) {
     return _localDataSource.addBudgetCategory(name, type);
   }
 

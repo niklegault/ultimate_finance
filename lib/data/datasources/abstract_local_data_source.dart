@@ -4,7 +4,7 @@ import 'package:ultimate_finance/models/transaction.dart';
 
 abstract class ILocalDataSource {
   Stream<List<BudgetCategory>> watchAllBudgetCategories();
-  Future<void> addBudgetCategory(String name, Types type);
+  Future<int> addBudgetCategory(String name, Types type);
 
   // This is the correct, efficient method for the UI
   Stream<List<BudgetPeriod>> watchBudgetPeriodsForMonth(DateTime month);

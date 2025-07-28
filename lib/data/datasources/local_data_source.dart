@@ -46,14 +46,15 @@ class BudgetDao extends DatabaseAccessor<LocalDatabase> with _$BudgetDaoMixin {
   BudgetDao(super.db);
 
   Stream<List<BudgetCategory>> watchAllBudgetCategories() => select(budgetCategories).watch();
-  Future<void> addBudgetCategory(String name, Types type) => into(budgetCategories).insert(BudgetCategoriesCompanion.insert(name: name, type: type));
-
+  Future<int> addBudgetCategory(String name, Types type) {
+    return into(budgetCategories).insert(BudgetCategoriesCompanion.insert(name: name, type: type));
+  }
   Stream<List<BudgetPeriod>> watchPeriodsForMonth(DateTime month) {
     final startOfMonth = DateTime(month.year, month.month, 1);
     return (select(budgetPeriods)..where((tbl) => tbl.period.equals(startOfMonth))).watch();
   }
 
-  Future<void> updateBudgetPeriod(BudgetPeriod period) => into(budgetPeriods).insertOnConflictUpdate(period as Insertable<BudgetPeriod>);
+  Future<void> updateBudgetPeriod(BudgetPeriod period) => into(budgetPeriods).insertOnConflictUpdate(period.toCompanion(true));
 }
 
 @DriftAccessor(tables: [Transactions])
@@ -93,7 +94,7 @@ class LocalDatabase extends _$LocalDatabase implements ILocalDataSource {
   @override
   Stream<List<BudgetCategory>> watchAllBudgetCategories() => budgetDao.watchAllBudgetCategories();
   @override
-  Future<void> addBudgetCategory(String name, Types type) => budgetDao.addBudgetCategory(name, type);
+  Future<int> addBudgetCategory(String name, Types type) => budgetDao.addBudgetCategory(name, type);
   @override
   Stream<List<BudgetPeriod>> watchBudgetPeriodsForMonth(DateTime month) => budgetDao.watchPeriodsForMonth(month);
   @override

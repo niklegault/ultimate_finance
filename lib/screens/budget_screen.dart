@@ -29,9 +29,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Future<void> _addCategory(Types type, String name, double budgetedAmount) async {
     // We first add the category to get its ID, then add the budgeted amount for the current month.
     // In a real app, you might want to wrap this in a transaction.
-    await dataRepository.addBudgetCategory(name, type);
+    final newCatID = await dataRepository.addBudgetCategory(name, type);
     // This is a simplified approach. A more robust way would be to get the newly created category's ID
     // and then use it to add the budgeted amount. For now, we'll add the amount in the dialog.
+    if(budgetedAmount > 0) {
+      await _updateBudgetedAmount(newCatID, budgetedAmount);
+    }
   }
 
   Future<void> _updateBudgetedAmount(int categoryId, double amount) async {

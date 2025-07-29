@@ -1,16 +1,31 @@
-# ultimate_finance
+# Ultimate Finance (Temporary Title)
 
-A new Flutter project.
+The ultimate budgeting app, allowing you to track income, expenses, savings, and investments.
 
-## Getting Started
+With the ability to analyze your spending, visualize your investments, and plan your future, 
+Ultimate Finance is the one-stop solution for all your financial planning needs.
 
-This project is a starting point for a Flutter application.
+## About
+This is a personal project that I've been wanting to make for a while, and am finally pushing ahead to complete it.
+There have beens times where I have had to put the project down for a few weeks but I am hoping to finish a prototype shorty.
 
-A few resources to get you started if this is your first Flutter project:
+## Development
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+I decided to start learning a new framework for this application, using Flutter and Dart for the first time.
+To get the prototype along faster, I have been using AI models to help with the initial development, and will rework things to
+fully optimize the application at a later date.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Build and Run
+
+The application is mainly focused on Android development.
+
+Required:
+- Physical Android device set-up for development
+  OR
+- Android Emulator
+- Flutter SDK
+
+To Build:
+1. Run the following command in your terminal from the /ultimate_finance directory: `dart run build_runner build --delete-conflicting-outputs`
+2. Select the debugging environment
+3. Launch a debugging session

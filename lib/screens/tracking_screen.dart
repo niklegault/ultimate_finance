@@ -160,9 +160,140 @@ class _TrackingScreenState extends State<TrackingScreen> {
     );
   }
 
+  Future<void> _showEditItemDialog(
+      Transaction transaction, List<BudgetCategory> allCategories) async {
+    final categoryMap = {for (var cat in allCategories) cat.id: cat};
+    final editFormKey = GlobalKey<FormState>();
+
+    Types? selectedType = transaction.type;
+    BudgetCategory? selectedCategory = categoryMap[transaction.categoryId];
+    final amountController =
+        TextEditingController(text: transaction.amount.toStringAsFixed(2));
+    final notesController = TextEditingController(text: transaction.description);
+    DateTime selectedDate = transaction.date;
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final filteredCategories =
+                allCategories.where((cat) => cat.type == selectedType).toList();
+
+            return AlertDialog(
+              title: const Text('Edit Transaction'),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: editFormKey,
+                  child: ListBody(
+                    children: <Widget>[
+                      DropdownButtonFormField<Types>(
+                        decoration: const InputDecoration(labelText: 'Type'),
+                        value: selectedType,
+                        onChanged: (Types? newValue) {
+                          setState(() {
+                            selectedType = newValue;
+                            // Reset category if it's not valid for the new type
+                            if (filteredCategories.every((c) => c.id != selectedCategory?.id)) {
+                              selectedCategory = null;
+                            }
+                          });
+                        },
+                        items: Types.values
+                            .map((type) => DropdownMenuItem(
+                                value: type, child: Text(type.name)))
+                            .toList(),
+                      ),
+                      if (selectedType != null)
+                        DropdownButtonFormField<BudgetCategory>(
+                          decoration:
+                              const InputDecoration(labelText: 'Category'),
+                          value: selectedCategory,
+                          onChanged: (BudgetCategory? newValue) =>
+                              setState(() => selectedCategory = newValue),
+                          items: filteredCategories
+                              .map((cat) => DropdownMenuItem(
+                                  value: cat, child: Text(cat.name)))
+                              .toList(),
+                          validator: (v) => v == null ? 'Please select a category' : null,
+                        ),
+                      TextFormField(
+                        controller: amountController,
+                        decoration: const InputDecoration(labelText: 'Amount'),
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        validator: (v) => (v == null || v.isEmpty || double.tryParse(v) == null) ? 'Enter a valid amount' : null,
+                      ),
+                      TextFormField(
+                        controller: notesController,
+                        decoration:
+                            const InputDecoration(labelText: 'Notes (Optional)'),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                            "Date: ${DateFormat.yMd().format(selectedDate)}"),
+                        trailing: const Icon(Icons.calendar_today),
+                        onTap: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (pickedDate != null) {
+                            setState(() => selectedDate = pickedDate);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                // DELETE BUTTON
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  color: Theme.of(context).colorScheme.error,
+                  onPressed: () {
+                    _deleteTransaction(transaction.id);
+                    Navigator.of(dialogContext).pop();
+                  },
+                ),
+                const Spacer(),
+                TextButton(
+                    child: const Text('Cancel'),
+                    onPressed: () => Navigator.of(dialogContext).pop()),
+                TextButton(
+                  child: const Text('Save'),
+                  onPressed: () {
+                    if (editFormKey.currentState!.validate()) {
+                      // Use copyWith to create a new immutable object
+                      final updatedTransaction = transaction.copyWith(
+                        type: selectedType,
+                        categoryId: selectedCategory!.id,
+                        amount: double.parse(amountController.text),
+                        date: selectedDate,
+                        description: notesController.text,
+                      );
+                      _updateTransaction(updatedTransaction);
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildTrackedItem(
     Transaction transaction,
     Map<int, BudgetCategory> categoryMap,
+    List<BudgetCategory> allCategories,
   ) {
     final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
     final category = categoryMap[transaction.categoryId];
@@ -191,7 +322,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
               fontWeight: FontWeight.bold, color: color, fontSize: 16),
         ),
         onTap: () {
-          // TODO: Implement _showEditItemDialog
+          _showEditItemDialog(transaction, allCategories);
         },
       ),
     );
@@ -259,7 +390,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     itemCount: allTransactions.length,
                     itemBuilder: (context, index) {
                       final transaction = allTransactions[index];
-                      return _buildTrackedItem(transaction, categoryMap);
+                      return _buildTrackedItem(transaction, categoryMap, allCategories);
                     },
                   ),
                 ),

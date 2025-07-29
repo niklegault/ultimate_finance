@@ -49,6 +49,19 @@ class BudgetDao extends DatabaseAccessor<LocalDatabase> with _$BudgetDaoMixin {
   Future<int> addBudgetCategory(String name, Types type) {
     return into(budgetCategories).insert(BudgetCategoriesCompanion.insert(name: name, type: type));
   }
+
+  Future<void> updateBudgetCategory(BudgetCategory category) {
+    return update(budgetCategories).replace(BudgetCategoriesCompanion(
+      id: Value(category.id),
+      name: Value(category.name),
+      type: Value(category.type),
+    ));
+  }
+
+  Future<void> deleteBudgetCategory(int id) {
+    return (delete(budgetCategories)..where((tbl) => tbl.id.equals(id))).go();
+  }
+
   Stream<List<BudgetPeriod>> watchPeriodsForMonth(DateTime month) {
     final startOfMonth = DateTime(month.year, month.month, 1);
     return (select(budgetPeriods)..where((tbl) => tbl.period.equals(startOfMonth))).watch();
@@ -103,6 +116,10 @@ class LocalDatabase extends _$LocalDatabase implements ILocalDataSource {
   Stream<List<BudgetCategory>> watchAllBudgetCategories() => budgetDao.watchAllBudgetCategories();
   @override
   Future<int> addBudgetCategory(String name, Types type) => budgetDao.addBudgetCategory(name, type);
+  @override
+  Future<void> updateBudgetCategory(BudgetCategory category) => budgetDao.updateBudgetCategory(category);
+  @override
+  Future<void> deleteBudgetCategory(int id) => budgetDao.deleteBudgetCategory(id);
   @override
   Stream<List<BudgetPeriod>> watchBudgetPeriodsForMonth(DateTime month) => budgetDao.watchPeriodsForMonth(month);
   @override

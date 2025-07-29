@@ -37,6 +37,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
     }
   }
 
+  Future<void> _updateCategory(BudgetCategory category, double budgetedAmount) async {
+    // Update the category and its budgeted amount.
+    await dataRepository.updateBudgetCategory(category);
+    await _updateBudgetedAmount(category.id, budgetedAmount);
+  }
+
   Future<void> _updateBudgetedAmount(int categoryId, double amount) async {
     await dataRepository.updateBudgetPeriod(categoryId, _currentPeriod, amount);
   }
@@ -99,41 +105,106 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 
   Future<void> _showEditCategoryDialog(BudgetCategory category, BudgetPeriod? budgetedAmount) async {
+    final nameController = TextEditingController(text: category.name);
+    Types selectedType = category.type;
     final amountController = TextEditingController(text: budgetedAmount?.budgetedAmount.toStringAsFixed(2) ?? '0.00');
+
 
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text('Edit Budget for ${category.name}'),
-          content: Form(
-            key: _formKey,
-            child: TextFormField(
-              controller: amountController,
-              decoration: const InputDecoration(labelText: 'Budgeted Amount'),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              validator: (value) {
-                if (value == null || value.isEmpty || double.tryParse(value) == null) {
-                  return 'Please enter a valid amount';
-                }
-                return null;
-              },
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(child: const Text('Cancel'), onPressed: () => Navigator.of(dialogContext).pop()),
-            TextButton(
-              child: const Text('Save'),
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  final newAmount = double.parse(amountController.text);
-                  _updateBudgetedAmount(category.id, newAmount);
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Category'),
+              content: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration:
+                          const InputDecoration(labelText: 'Category Name'),
+                      validator: (value) => (value == null || value.isEmpty)
+                          ? 'Please enter a name'
+                          : null,
+                    ),
+                    DropdownButtonFormField<Types>(
+                      decoration: const InputDecoration(labelText: 'Type'),
+                      value: selectedType,
+                      items: Types.values
+                          .map((type) => DropdownMenuItem(
+                              value: type, child: Text(type.name)))
+                          .toList(),
+                      onChanged: (Types? newValue) {
+                        if (newValue != null) {
+                          setState(() => selectedType = newValue);
+                        }
+                      },
+                    ),
+                    TextFormField(
+                      controller: amountController,
+                      decoration: const InputDecoration(labelText: 'Budgeted Amount'),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      validator: (value) {
+                        if (value == null || value.isEmpty || double.tryParse(value) == null) {
+                          return 'Please enter a valid amount';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                IconButton(icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () {
+                    // Confirm deletion
+                    showDialog(
+                      context: dialogContext,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Category'),
+                        content: const Text('Are you sure you want to delete this category?'),
+                        actions: [
+                          TextButton(
+                            child: const Text('Cancel'),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                          TextButton(
+                            child: const Text('Delete'),
+                            onPressed: () {
+                              dataRepository.deleteBudgetCategory(category.id);
+                              Navigator.of(context).pop(); // Close confirmation dialog
+                              Navigator.of(dialogContext).pop(); // Close edit dialog
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                ),
+                TextButton(
+                    child: const Text('Cancel'),
+                    onPressed: () => Navigator.of(dialogContext).pop()),
+                TextButton(
+                  child: const Text('Save'),
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      final updatedCategory = category.copyWith(
+                        name: nameController.text,
+                        type: selectedType,
+                      );
+                      final newAmount = double.parse(amountController.text);
+                      _updateCategory(updatedCategory, newAmount);
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );

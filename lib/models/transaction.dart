@@ -16,4 +16,22 @@ class Transaction {
     required this.amount,
     this.description,
   });
+
+  Transaction copyWith({
+    int? id,
+    DateTime? date,
+    Types? type,
+    int? categoryId,
+    double? amount,
+    String? description,
+  }) {
+    return Transaction(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      type: type ?? this.type,
+      categoryId: categoryId ?? this.categoryId,
+      amount: amount ?? this.amount,
+      description: description ?? this.description,
+    );
+  }
 }

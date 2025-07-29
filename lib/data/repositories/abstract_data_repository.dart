@@ -5,6 +5,8 @@ import 'package:ultimate_finance/models/transaction.dart';
 abstract class IDataRepository {
   Stream<List<BudgetCategory>> watchAllBudgetCategories();
   Future<int> addBudgetCategory(String name, Types type);
+  Future<void> updateBudgetCategory(BudgetCategory category);
+  Future<void> deleteBudgetCategory(int id);
 
   // This method now matches the data source and UI needs
   Stream<List<BudgetPeriod>> watchBudgetPeriodsForMonth(DateTime month);

@@ -10,6 +10,18 @@ class BudgetCategory {
     required this.name,
     required this.type,
   });
+
+  BudgetCategory copyWith({
+    int? id,
+    String? name,
+    Types? type,
+  }) {
+    return BudgetCategory(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+    );
+  } 
 }
 
 class BudgetPeriod {

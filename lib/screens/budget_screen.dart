@@ -21,23 +21,29 @@ class _BudgetScreenState extends State<BudgetScreen> {
     setState(() {
       // Use the current month if null is passed, otherwise use the selected month.
       _currentPeriod = newPeriod ?? DateTime.now();
-      print('Selected period: $_currentPeriod');
     });
   }
 
   // --- Database Methods ---
-  Future<void> _addCategory(Types type, String name, double budgetedAmount) async {
+  Future<void> _addCategory(
+    Types type,
+    String name,
+    double budgetedAmount,
+  ) async {
     // We first add the category to get its ID, then add the budgeted amount for the current month.
     // In a real app, you might want to wrap this in a transaction.
     final newCatID = await dataRepository.addBudgetCategory(name, type);
     // This is a simplified approach. A more robust way would be to get the newly created category's ID
     // and then use it to add the budgeted amount. For now, we'll add the amount in the dialog.
-    if(budgetedAmount > 0) {
+    if (budgetedAmount > 0) {
       await _updateBudgetedAmount(newCatID, budgetedAmount);
     }
   }
 
-  Future<void> _updateCategory(BudgetCategory category, double budgetedAmount) async {
+  Future<void> _updateCategory(
+    BudgetCategory category,
+    double budgetedAmount,
+  ) async {
     // Update the category and its budgeted amount.
     await dataRepository.updateBudgetCategory(category);
     await _updateBudgetedAmount(category.id, budgetedAmount);
@@ -66,24 +72,37 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 TextFormField(
                   controller: nameController,
                   decoration: const InputDecoration(labelText: 'Category Name'),
-                  validator: (value) => (value == null || value.isEmpty) ? 'Please enter a name' : null,
+                  validator:
+                      (value) =>
+                          (value == null || value.isEmpty)
+                              ? 'Please enter a name'
+                              : null,
                 ),
                 TextFormField(
                   controller: amountController,
-                  decoration: const InputDecoration(labelText: 'Budgeted Amount'),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                   validator: (value) {
-                      if (value == null || value.isEmpty || double.tryParse(value) == null) {
-                        return 'Please enter a valid amount';
-                      }
-                      return null;
-                    },
+                  decoration: const InputDecoration(
+                    labelText: 'Budgeted Amount',
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (value) {
+                    if (value == null ||
+                        value.isEmpty ||
+                        double.tryParse(value) == null) {
+                      return 'Please enter a valid amount';
+                    }
+                    return null;
+                  },
                 ),
               ],
             ),
           ),
           actions: <Widget>[
-            TextButton(child: const Text('Cancel'), onPressed: () => Navigator.of(dialogContext).pop()),
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
             TextButton(
               child: const Text('Add'),
               onPressed: () {
@@ -104,11 +123,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  Future<void> _showEditCategoryDialog(BudgetCategory category, BudgetPeriod? budgetedAmount) async {
+  Future<void> _showEditCategoryDialog(
+    BudgetCategory category,
+    BudgetPeriod? budgetedAmount,
+  ) async {
     final nameController = TextEditingController(text: category.name);
     Types selectedType = category.type;
-    final amountController = TextEditingController(text: budgetedAmount?.budgetedAmount.toStringAsFixed(2) ?? '0.00');
-
+    final amountController = TextEditingController(
+      text: budgetedAmount?.budgetedAmount.toStringAsFixed(2) ?? '0.00',
+    );
 
     return showDialog<void>(
       context: context,
@@ -125,19 +148,27 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   children: [
                     TextFormField(
                       controller: nameController,
-                      decoration:
-                          const InputDecoration(labelText: 'Category Name'),
-                      validator: (value) => (value == null || value.isEmpty)
-                          ? 'Please enter a name'
-                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Category Name',
+                      ),
+                      validator:
+                          (value) =>
+                              (value == null || value.isEmpty)
+                                  ? 'Please enter a name'
+                                  : null,
                     ),
                     DropdownButtonFormField<Types>(
                       decoration: const InputDecoration(labelText: 'Type'),
                       value: selectedType,
-                      items: Types.values
-                          .map((type) => DropdownMenuItem(
-                              value: type, child: Text(type.name)))
-                          .toList(),
+                      items:
+                          Types.values
+                              .map(
+                                (type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type.name),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (Types? newValue) {
                         if (newValue != null) {
                           setState(() => selectedType = newValue);
@@ -146,10 +177,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
                     ),
                     TextFormField(
                       controller: amountController,
-                      decoration: const InputDecoration(labelText: 'Budgeted Amount'),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: 'Budgeted Amount',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       validator: (value) {
-                        if (value == null || value.isEmpty || double.tryParse(value) == null) {
+                        if (value == null ||
+                            value.isEmpty ||
+                            double.tryParse(value) == null) {
                           return 'Please enter a valid amount';
                         }
                         return null;
@@ -159,35 +196,46 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ),
               ),
               actions: [
-                IconButton(icon: const Icon(Icons.delete, color: Colors.red),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () {
                     // Confirm deletion
                     showDialog(
                       context: dialogContext,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Category'),
-                        content: const Text('Are you sure you want to delete this category?'),
-                        actions: [
-                          TextButton(
-                            child: const Text('Cancel'),
-                            onPressed: () => Navigator.of(context).pop(),
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text('Delete Category'),
+                            content: const Text(
+                              'Are you sure you want to delete this category?',
+                            ),
+                            actions: [
+                              TextButton(
+                                child: const Text('Cancel'),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              TextButton(
+                                child: const Text('Delete'),
+                                onPressed: () {
+                                  dataRepository.deleteBudgetCategory(
+                                    category.id,
+                                  );
+                                  Navigator.of(
+                                    context,
+                                  ).pop(); // Close confirmation dialog
+                                  Navigator.of(
+                                    dialogContext,
+                                  ).pop(); // Close edit dialog
+                                },
+                              ),
+                            ],
                           ),
-                          TextButton(
-                            child: const Text('Delete'),
-                            onPressed: () {
-                              dataRepository.deleteBudgetCategory(category.id);
-                              Navigator.of(context).pop(); // Close confirmation dialog
-                              Navigator.of(dialogContext).pop(); // Close edit dialog
-                            },
-                          ),
-                        ],
-                      ),
                     );
-                  }
+                  },
                 ),
                 TextButton(
-                    child: const Text('Cancel'),
-                    onPressed: () => Navigator.of(dialogContext).pop()),
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
                 TextButton(
                   child: const Text('Save'),
                   onPressed: () {
@@ -213,7 +261,8 @@ class _BudgetScreenState extends State<BudgetScreen> {
   // --- Build Method ---
   @override
   Widget build(BuildContext context) {
-    final financialTheme = Theme.of(context).extension<FinancialThemeExtension>()!;
+    final financialTheme =
+        Theme.of(context).extension<FinancialThemeExtension>()!;
 
     return Column(
       children: [
@@ -234,32 +283,68 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               final allCategories = categoriesSnapshot.data!;
-              
+
               // This nested StreamBuilder gets the budgeted amounts for the selected month.
               return StreamBuilder<List<BudgetPeriod>>(
-                stream: dataRepository.watchBudgetPeriodsForMonth(_currentPeriod),
+                stream: dataRepository.watchBudgetPeriodsForMonth(
+                  _currentPeriod,
+                ),
                 builder: (context, amountsSnapshot) {
                   final budgetedAmounts = amountsSnapshot.data ?? [];
 
                   // Create a map for quick lookup of budgeted amounts by category ID.
-                  final amountMap = {for (var e in budgetedAmounts) e.categoryId: e};
+                  final amountMap = {
+                    for (var e in budgetedAmounts) e.categoryId: e,
+                  };
 
                   // Filter categories into their respective types.
-                  final incomeCategories = allCategories.where((c) => c.type == Types.income).toList();
-                  final expenseCategories = allCategories.where((c) => c.type == Types.expense).toList();
-                  final savingCategories = allCategories.where((c) => c.type == Types.saving).toList();
-                  final investmentCategories = allCategories.where((c) => c.type == Types.investment).toList();
+                  final incomeCategories =
+                      allCategories
+                          .where((c) => c.type == Types.income)
+                          .toList();
+                  final expenseCategories =
+                      allCategories
+                          .where((c) => c.type == Types.expense)
+                          .toList();
+                  final savingCategories =
+                      allCategories
+                          .where((c) => c.type == Types.saving)
+                          .toList();
+                  final investmentCategories =
+                      allCategories
+                          .where((c) => c.type == Types.investment)
+                          .toList();
 
                   // Calculate totals using the amountMap.
-                  final totalIncome = incomeCategories.fold(0.0, (sum, cat) => sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0));
-                  final totalExpenses = expenseCategories.fold(0.0, (sum, cat) => sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0));
-                  final totalSavings = savingCategories.fold(0.0, (sum, cat) => sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0));
-                  final totalInvestments = investmentCategories.fold(0.0, (sum, cat) => sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0));
-                  final unallocatedIncome = totalIncome - totalExpenses - totalSavings - totalInvestments;
+                  final totalIncome = incomeCategories.fold(
+                    0.0,
+                    (sum, cat) =>
+                        sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0),
+                  );
+                  final totalExpenses = expenseCategories.fold(
+                    0.0,
+                    (sum, cat) =>
+                        sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0),
+                  );
+                  final totalSavings = savingCategories.fold(
+                    0.0,
+                    (sum, cat) =>
+                        sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0),
+                  );
+                  final totalInvestments = investmentCategories.fold(
+                    0.0,
+                    (sum, cat) =>
+                        sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0),
+                  );
+                  final unallocatedIncome =
+                      totalIncome -
+                      totalExpenses -
+                      totalSavings -
+                      totalInvestments;
 
                   return Column(
                     children: [
-                       Padding(
+                      Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Text(
                           unallocatedIncome == 0
@@ -268,7 +353,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: unallocatedIncome >= 0 ? financialTheme.income : financialTheme.expense,
+                            color:
+                                unallocatedIncome >= 0
+                                    ? financialTheme.income
+                                    : financialTheme.expense,
                           ),
                         ),
                       ),
@@ -293,7 +381,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               sectionColour: financialTheme.expense,
                               total: totalExpenses,
                             ),
-                             _buildCategorySection(
+                            _buildCategorySection(
                               title: 'Savings',
                               categories: savingCategories,
                               amountMap: amountMap,
@@ -301,7 +389,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               sectionColour: financialTheme.savings,
                               total: totalSavings,
                             ),
-                             _buildCategorySection(
+                            _buildCategorySection(
                               title: 'Investments',
                               categories: investmentCategories,
                               amountMap: amountMap,
@@ -339,8 +427,22 @@ class _BudgetScreenState extends State<BudgetScreen> {
           type == Types.income ? Icons.arrow_downward : Icons.arrow_upward,
           color: sectionColour,
         ),
-        title: Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: sectionColour)),
-        trailing: Text('\$${total.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: sectionColour)),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: sectionColour,
+          ),
+        ),
+        trailing: Text(
+          '\$${total.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: sectionColour,
+          ),
+        ),
         children: <Widget>[
           ...categories.map((category) {
             final budgetedAmount = amountMap[category.id];
@@ -355,7 +457,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
           }),
           ListTile(
             leading: Icon(Icons.add, color: sectionColour),
-            title: Text('Add New $title Category', style: TextStyle(color: sectionColour)),
+            title: Text(
+              'Add New $title Category',
+              style: TextStyle(color: sectionColour),
+            ),
             onTap: () => _showAddCategoryDialog(type),
           ),
         ],

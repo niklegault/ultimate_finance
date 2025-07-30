@@ -2,21 +2,21 @@ import 'package:ultimate_finance/models/types.dart';
 
 class Account {
   final int id;
-  final int catId;
+  final int categoryId;
   final String name;
   final Types type;
 
   Account({
     required this.id,
-    required this.catId,
+    required this.categoryId,
     required this.name,
     required this.type,
   });
 
-  Account copyWith({int? id, int? catId, String? name, Types? type}) {
+  Account copyWith({int? id, int? categoryId, String? name, Types? type}) {
     return Account(
       id: id ?? this.id,
-      catId: catId ?? this.catId,
+      categoryId: categoryId ?? this.categoryId,
       name: name ?? this.name,
       type: type ?? this.type,
     );

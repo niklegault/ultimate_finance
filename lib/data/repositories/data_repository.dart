@@ -102,6 +102,19 @@ class DataRepository implements IDataRepository {
   }
 
   @override
+  Future<Account> getAccountByCategoryId(int categoryId) {
+    return _localDataSource.getAccountByCategoryId(categoryId);
+  }
+
+  @override
+  Future<AccountPeriod> getAccountPeriodFromCategoryId(
+    int categoryId,
+    DateTime month,
+  ) {
+    return _localDataSource.getAccountPeriodFromCategoryId(categoryId, month);
+  }
+
+  @override
   Stream<List<AccountPeriod>> watchAccountPeriodsForMonth(DateTime month) {
     return _localDataSource.watchAccountPeriodsForMonth(month);
   }

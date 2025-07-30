@@ -35,7 +35,32 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
     if (type == Types.saving || type == Types.investment) {
       if (amount > 0) {
-      } else {}
+        final account = await dataRepository.getAccountPeriodFromCategoryId(
+          categoryId,
+          date,
+        );
+        await dataRepository.updateAccountPeriod(
+          account.id,
+          account.period,
+          account.balance,
+          account.deposits + amount,
+          account.withdrawals,
+          account.interest,
+        );
+      } else {
+        final account = await dataRepository.getAccountPeriodFromCategoryId(
+          categoryId,
+          date,
+        );
+        await dataRepository.updateAccountPeriod(
+          account.id,
+          account.period,
+          account.balance,
+          account.deposits,
+          account.withdrawals + amount.abs(),
+          account.interest,
+        );
+      }
     }
   }
 

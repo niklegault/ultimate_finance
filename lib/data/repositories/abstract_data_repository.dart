@@ -32,7 +32,11 @@ abstract class IDataRepository {
   Future<int> addAccount(String name, Types type, int catId);
   Future<void> updateAccount(Account account);
   Future<void> deleteAccount(int id);
-
+  Future<Account> getAccountByCategoryId(int categoryId);
+  Future<AccountPeriod> getAccountPeriodFromCategoryId(
+    int categoryId,
+    DateTime month,
+  );
   Stream<List<AccountPeriod>> watchAccountPeriodsForMonth(DateTime month);
   Future<void> updateAccountPeriod(
     int accountId,

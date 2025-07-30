@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ultimate_finance/data/repositories/abstract_data_repository.dart';
 import 'package:ultimate_finance/models/budget_category.dart';
+import 'package:ultimate_finance/models/account.dart';
 import 'package:ultimate_finance/models/types.dart';
 import 'package:ultimate_finance/theme/app_theme.dart';
 import 'package:ultimate_finance/widgets/period_selector.dart';
@@ -50,6 +51,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
   ) async {
     // Update the category and its budgeted amount.
     await dataRepository.updateBudgetCategory(category);
+    if (category.type == Types.saving || category.type == Types.investment) {
+      // Update the account associated with this category.
+      final account = await dataRepository.getAccountByCategoryId(category.id);
+      await _updateAccount(account, category.id, category.name);
+    }
     await _updateBudgetedAmount(category.id, budgetedAmount);
   }
 
@@ -67,6 +73,15 @@ class _BudgetScreenState extends State<BudgetScreen> {
       0.0,
       0.0,
     );
+  }
+
+  Future<void> _updateAccount(
+    Account account,
+    int categoryId,
+    String name,
+  ) async {
+    final updatedAccount = account.copyWith(name: name, categoryId: categoryId);
+    await dataRepository.updateAccount(updatedAccount);
   }
 
   // --- Dialogs ---

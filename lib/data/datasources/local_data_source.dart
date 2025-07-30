@@ -53,16 +53,14 @@ class Transactions extends Table {
 @UseRowClass(Account)
 class Accounts extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get catId =>
-      integer().references(
+  IntColumn get categoryId =>
+      integer().unique().references(
         BudgetCategories,
         #id,
         onDelete: KeyAction.cascade,
       )();
   TextColumn get name => text()();
   IntColumn get type => integer().map(EnumIndexConverter(Types.values))();
-  @override
-  List<String> get customConstraints => ['UNIQUE(cat_id, name)'];
 }
 
 @UseRowClass(AccountPeriod)
@@ -148,15 +146,16 @@ class AccountDao extends DatabaseAccessor<LocalDatabase>
 
   Stream<List<Account>> watchAllAccounts() => select(accounts).watch();
   Future<int> addAccount(String name, Types type, int catId) {
-    return into(
-      accounts,
-    ).insert(AccountsCompanion.insert(name: name, type: type, catId: catId));
+    return into(accounts).insert(
+      AccountsCompanion.insert(name: name, type: type, categoryId: catId),
+    );
   }
 
   Future<void> updateAccount(Account account) {
     return update(accounts).replace(
       AccountsCompanion(
         id: Value(account.id),
+        categoryId: Value(account.categoryId),
         name: Value(account.name),
         type: Value(account.type),
       ),
@@ -165,6 +164,26 @@ class AccountDao extends DatabaseAccessor<LocalDatabase>
 
   Future<void> deleteAccount(int id) {
     return (delete(accounts)..where((tbl) => tbl.id.equals(id))).go();
+  }
+
+  Future<Account> getAccountByCategoryId(int categoryId) {
+    return (select(accounts)
+      ..where((tbl) => tbl.categoryId.equals(categoryId))).getSingle();
+  }
+
+  Future<AccountPeriod> getAccountPeriodFromCategoryId(
+    int categoryId,
+    DateTime month,
+  ) {
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    final accountQuery = select(accounts)
+      ..where((tbl) => tbl.categoryId.equals(categoryId));
+    return accountQuery.getSingle().then((account) {
+      return (select(accountPeriods)..where(
+        (tbl) =>
+            tbl.accountId.equals(account.id) & tbl.period.equals(startOfMonth),
+      )).getSingle();
+    });
   }
 
   Stream<List<AccountPeriod>> watchAccountPeriodsForMonth(DateTime month) {
@@ -205,9 +224,8 @@ class LocalDatabase extends _$LocalDatabase implements ILocalDataSource {
   LocalDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3; // Version 2 because you have multiple tables
+  int get schemaVersion => 3;
 
-  // --- THIS IS THE CRITICAL FIX FOR THE LOADING SCREEN ---
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
@@ -297,6 +315,18 @@ class LocalDatabase extends _$LocalDatabase implements ILocalDataSource {
       accountDao.updateAccount(account);
   @override
   Future<void> deleteAccount(int id) => accountDao.deleteAccount(id);
+
+  @override
+  Future<Account> getAccountByCategoryId(int categoryId) =>
+      accountDao.getAccountByCategoryId(categoryId);
+
+  @override
+  Future<AccountPeriod> getAccountPeriodFromCategoryId(
+    int categoryId,
+    DateTime month,
+  ) {
+    return accountDao.getAccountPeriodFromCategoryId(categoryId, month);
+  }
 
   @override
   Stream<List<AccountPeriod>> watchAccountPeriodsForMonth(DateTime month) =>

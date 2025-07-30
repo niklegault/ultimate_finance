@@ -13,6 +13,12 @@ mixin _$TransactionDaoMixin on DatabaseAccessor<LocalDatabase> {
       attachedDatabase.budgetCategories;
   $TransactionsTable get transactions => attachedDatabase.transactions;
 }
+mixin _$AccountDaoMixin on DatabaseAccessor<LocalDatabase> {
+  $BudgetCategoriesTable get budgetCategories =>
+      attachedDatabase.budgetCategories;
+  $AccountsTable get accounts => attachedDatabase.accounts;
+  $AccountPeriodsTable get accountPeriods => attachedDatabase.accountPeriods;
+}
 
 class $BudgetCategoriesTable extends BudgetCategories
     with TableInfo<$BudgetCategoriesTable, BudgetCategory> {
@@ -682,6 +688,536 @@ class TransactionsCompanion
   }
 }
 
+class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AccountsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _catIdMeta = const VerificationMeta('catId');
+  @override
+  late final GeneratedColumn<int> catId = GeneratedColumn<int>(
+    'cat_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES budget_categories (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<Types, int> type =
+      GeneratedColumn<int>(
+        'type',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<Types>($AccountsTable.$convertertype);
+  @override
+  List<GeneratedColumn> get $columns => [id, catId, name, type];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'accounts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Account> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('cat_id')) {
+      context.handle(
+        _catIdMeta,
+        catId.isAcceptableOrUnknown(data['cat_id']!, _catIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_catIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Account map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Account(
+      id:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}id'],
+          )!,
+      catId:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}cat_id'],
+          )!,
+      name:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}name'],
+          )!,
+      type: $AccountsTable.$convertertype.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}type'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $AccountsTable createAlias(String alias) {
+    return $AccountsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<Types, int, int> $convertertype =
+      EnumIndexConverter(Types.values);
+}
+
+class AccountsCompanion extends UpdateCompanion<Account> {
+  final Value<int> id;
+  final Value<int> catId;
+  final Value<String> name;
+  final Value<Types> type;
+  const AccountsCompanion({
+    this.id = const Value.absent(),
+    this.catId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.type = const Value.absent(),
+  });
+  AccountsCompanion.insert({
+    this.id = const Value.absent(),
+    required int catId,
+    required String name,
+    required Types type,
+  }) : catId = Value(catId),
+       name = Value(name),
+       type = Value(type);
+  static Insertable<Account> custom({
+    Expression<int>? id,
+    Expression<int>? catId,
+    Expression<String>? name,
+    Expression<int>? type,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (catId != null) 'cat_id': catId,
+      if (name != null) 'name': name,
+      if (type != null) 'type': type,
+    });
+  }
+
+  AccountsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? catId,
+    Value<String>? name,
+    Value<Types>? type,
+  }) {
+    return AccountsCompanion(
+      id: id ?? this.id,
+      catId: catId ?? this.catId,
+      name: name ?? this.name,
+      type: type ?? this.type,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (catId.present) {
+      map['cat_id'] = Variable<int>(catId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<int>(
+        $AccountsTable.$convertertype.toSql(type.value),
+      );
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountsCompanion(')
+          ..write('id: $id, ')
+          ..write('catId: $catId, ')
+          ..write('name: $name, ')
+          ..write('type: $type')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AccountPeriodsTable extends AccountPeriods
+    with TableInfo<$AccountPeriodsTable, AccountPeriod> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AccountPeriodsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<int> accountId = GeneratedColumn<int>(
+    'account_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES accounts (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _periodMeta = const VerificationMeta('period');
+  @override
+  late final GeneratedColumn<DateTime> period = GeneratedColumn<DateTime>(
+    'period',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _balanceMeta = const VerificationMeta(
+    'balance',
+  );
+  @override
+  late final GeneratedColumn<double> balance = GeneratedColumn<double>(
+    'balance',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _depositsMeta = const VerificationMeta(
+    'deposits',
+  );
+  @override
+  late final GeneratedColumn<double> deposits = GeneratedColumn<double>(
+    'deposits',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _withdrawalsMeta = const VerificationMeta(
+    'withdrawals',
+  );
+  @override
+  late final GeneratedColumn<double> withdrawals = GeneratedColumn<double>(
+    'withdrawals',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _interestMeta = const VerificationMeta(
+    'interest',
+  );
+  @override
+  late final GeneratedColumn<double> interest = GeneratedColumn<double>(
+    'interest',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    accountId,
+    period,
+    balance,
+    deposits,
+    withdrawals,
+    interest,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'account_periods';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AccountPeriod> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('period')) {
+      context.handle(
+        _periodMeta,
+        period.isAcceptableOrUnknown(data['period']!, _periodMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_periodMeta);
+    }
+    if (data.containsKey('balance')) {
+      context.handle(
+        _balanceMeta,
+        balance.isAcceptableOrUnknown(data['balance']!, _balanceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_balanceMeta);
+    }
+    if (data.containsKey('deposits')) {
+      context.handle(
+        _depositsMeta,
+        deposits.isAcceptableOrUnknown(data['deposits']!, _depositsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_depositsMeta);
+    }
+    if (data.containsKey('withdrawals')) {
+      context.handle(
+        _withdrawalsMeta,
+        withdrawals.isAcceptableOrUnknown(
+          data['withdrawals']!,
+          _withdrawalsMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_withdrawalsMeta);
+    }
+    if (data.containsKey('interest')) {
+      context.handle(
+        _interestMeta,
+        interest.isAcceptableOrUnknown(data['interest']!, _interestMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_interestMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AccountPeriod map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AccountPeriod(
+      id:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}id'],
+          )!,
+      accountId:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}account_id'],
+          )!,
+      period:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.dateTime,
+            data['${effectivePrefix}period'],
+          )!,
+      balance:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.double,
+            data['${effectivePrefix}balance'],
+          )!,
+      deposits:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.double,
+            data['${effectivePrefix}deposits'],
+          )!,
+      withdrawals:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.double,
+            data['${effectivePrefix}withdrawals'],
+          )!,
+      interest:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.double,
+            data['${effectivePrefix}interest'],
+          )!,
+    );
+  }
+
+  @override
+  $AccountPeriodsTable createAlias(String alias) {
+    return $AccountPeriodsTable(attachedDatabase, alias);
+  }
+}
+
+class AccountPeriodsCompanion extends UpdateCompanion<AccountPeriod> {
+  final Value<int> id;
+  final Value<int> accountId;
+  final Value<DateTime> period;
+  final Value<double> balance;
+  final Value<double> deposits;
+  final Value<double> withdrawals;
+  final Value<double> interest;
+  const AccountPeriodsCompanion({
+    this.id = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.period = const Value.absent(),
+    this.balance = const Value.absent(),
+    this.deposits = const Value.absent(),
+    this.withdrawals = const Value.absent(),
+    this.interest = const Value.absent(),
+  });
+  AccountPeriodsCompanion.insert({
+    this.id = const Value.absent(),
+    required int accountId,
+    required DateTime period,
+    required double balance,
+    required double deposits,
+    required double withdrawals,
+    required double interest,
+  }) : accountId = Value(accountId),
+       period = Value(period),
+       balance = Value(balance),
+       deposits = Value(deposits),
+       withdrawals = Value(withdrawals),
+       interest = Value(interest);
+  static Insertable<AccountPeriod> custom({
+    Expression<int>? id,
+    Expression<int>? accountId,
+    Expression<DateTime>? period,
+    Expression<double>? balance,
+    Expression<double>? deposits,
+    Expression<double>? withdrawals,
+    Expression<double>? interest,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (accountId != null) 'account_id': accountId,
+      if (period != null) 'period': period,
+      if (balance != null) 'balance': balance,
+      if (deposits != null) 'deposits': deposits,
+      if (withdrawals != null) 'withdrawals': withdrawals,
+      if (interest != null) 'interest': interest,
+    });
+  }
+
+  AccountPeriodsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? accountId,
+    Value<DateTime>? period,
+    Value<double>? balance,
+    Value<double>? deposits,
+    Value<double>? withdrawals,
+    Value<double>? interest,
+  }) {
+    return AccountPeriodsCompanion(
+      id: id ?? this.id,
+      accountId: accountId ?? this.accountId,
+      period: period ?? this.period,
+      balance: balance ?? this.balance,
+      deposits: deposits ?? this.deposits,
+      withdrawals: withdrawals ?? this.withdrawals,
+      interest: interest ?? this.interest,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<int>(accountId.value);
+    }
+    if (period.present) {
+      map['period'] = Variable<DateTime>(period.value);
+    }
+    if (balance.present) {
+      map['balance'] = Variable<double>(balance.value);
+    }
+    if (deposits.present) {
+      map['deposits'] = Variable<double>(deposits.value);
+    }
+    if (withdrawals.present) {
+      map['withdrawals'] = Variable<double>(withdrawals.value);
+    }
+    if (interest.present) {
+      map['interest'] = Variable<double>(interest.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountPeriodsCompanion(')
+          ..write('id: $id, ')
+          ..write('accountId: $accountId, ')
+          ..write('period: $period, ')
+          ..write('balance: $balance, ')
+          ..write('deposits: $deposits, ')
+          ..write('withdrawals: $withdrawals, ')
+          ..write('interest: $interest')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -690,10 +1226,13 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   );
   late final $BudgetPeriodsTable budgetPeriods = $BudgetPeriodsTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
+  late final $AccountsTable accounts = $AccountsTable(this);
+  late final $AccountPeriodsTable accountPeriods = $AccountPeriodsTable(this);
   late final BudgetDao budgetDao = BudgetDao(this as LocalDatabase);
   late final TransactionDao transactionDao = TransactionDao(
     this as LocalDatabase,
   );
+  late final AccountDao accountDao = AccountDao(this as LocalDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -702,6 +1241,8 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     budgetCategories,
     budgetPeriods,
     transactions,
+    accounts,
+    accountPeriods,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -718,6 +1259,20 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('transactions', kind: UpdateKind.update)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'budget_categories',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('accounts', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'accounts',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('account_periods', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -792,6 +1347,25 @@ final class $$BudgetCategoriesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$AccountsTable, List<Account>> _accountsRefsTable(
+    _$LocalDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.accounts,
+    aliasName: $_aliasNameGenerator(db.budgetCategories.id, db.accounts.catId),
+  );
+
+  $$AccountsTableProcessedTableManager get accountsRefs {
+    final manager = $$AccountsTableTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.catId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_accountsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$BudgetCategoriesTableFilterComposer
@@ -860,6 +1434,31 @@ class $$BudgetCategoriesTableFilterComposer
           }) => $$TransactionsTableFilterComposer(
             $db: $db,
             $table: $db.transactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> accountsRefs(
+    Expression<bool> Function($$AccountsTableFilterComposer f) f,
+  ) {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.catId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -962,6 +1561,31 @@ class $$BudgetCategoriesTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> accountsRefs<T extends Object>(
+    Expression<T> Function($$AccountsTableAnnotationComposer a) f,
+  ) {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.catId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$BudgetCategoriesTableTableManager
@@ -980,6 +1604,7 @@ class $$BudgetCategoriesTableTableManager
           PrefetchHooks Function({
             bool budgetPeriodsRefs,
             bool transactionsRefs,
+            bool accountsRefs,
           })
         > {
   $$BudgetCategoriesTableTableManager(
@@ -1031,12 +1656,14 @@ class $$BudgetCategoriesTableTableManager
           prefetchHooksCallback: ({
             budgetPeriodsRefs = false,
             transactionsRefs = false,
+            accountsRefs = false,
           }) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (budgetPeriodsRefs) db.budgetPeriods,
                 if (transactionsRefs) db.transactions,
+                if (accountsRefs) db.accounts,
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -1085,6 +1712,27 @@ class $$BudgetCategoriesTableTableManager
                           ),
                       typedResults: items,
                     ),
+                  if (accountsRefs)
+                    await $_getPrefetchedData<
+                      BudgetCategory,
+                      $BudgetCategoriesTable,
+                      Account
+                    >(
+                      currentTable: table,
+                      referencedTable: $$BudgetCategoriesTableReferences
+                          ._accountsRefsTable(db),
+                      managerFromTypedResult:
+                          (p0) =>
+                              $$BudgetCategoriesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).accountsRefs,
+                      referencedItemsForCurrentItem:
+                          (item, referencedItems) =>
+                              referencedItems.where((e) => e.catId == item.id),
+                      typedResults: items,
+                    ),
                 ];
               },
             );
@@ -1105,7 +1753,11 @@ typedef $$BudgetCategoriesTableProcessedTableManager =
       $$BudgetCategoriesTableUpdateCompanionBuilder,
       (BudgetCategory, $$BudgetCategoriesTableReferences),
       BudgetCategory,
-      PrefetchHooks Function({bool budgetPeriodsRefs, bool transactionsRefs})
+      PrefetchHooks Function({
+        bool budgetPeriodsRefs,
+        bool transactionsRefs,
+        bool accountsRefs,
+      })
     >;
 typedef $$BudgetPeriodsTableCreateCompanionBuilder =
     BudgetPeriodsCompanion Function({
@@ -1764,6 +2416,763 @@ typedef $$TransactionsTableProcessedTableManager =
       app_transaction.Transaction,
       PrefetchHooks Function({bool categoryId})
     >;
+typedef $$AccountsTableCreateCompanionBuilder =
+    AccountsCompanion Function({
+      Value<int> id,
+      required int catId,
+      required String name,
+      required Types type,
+    });
+typedef $$AccountsTableUpdateCompanionBuilder =
+    AccountsCompanion Function({
+      Value<int> id,
+      Value<int> catId,
+      Value<String> name,
+      Value<Types> type,
+    });
+
+final class $$AccountsTableReferences
+    extends BaseReferences<_$LocalDatabase, $AccountsTable, Account> {
+  $$AccountsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $BudgetCategoriesTable _catIdTable(_$LocalDatabase db) =>
+      db.budgetCategories.createAlias(
+        $_aliasNameGenerator(db.accounts.catId, db.budgetCategories.id),
+      );
+
+  $$BudgetCategoriesTableProcessedTableManager get catId {
+    final $_column = $_itemColumn<int>('cat_id')!;
+
+    final manager = $$BudgetCategoriesTableTableManager(
+      $_db,
+      $_db.budgetCategories,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_catIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$AccountPeriodsTable, List<AccountPeriod>>
+  _accountPeriodsRefsTable(_$LocalDatabase db) => MultiTypedResultKey.fromTable(
+    db.accountPeriods,
+    aliasName: $_aliasNameGenerator(
+      db.accounts.id,
+      db.accountPeriods.accountId,
+    ),
+  );
+
+  $$AccountPeriodsTableProcessedTableManager get accountPeriodsRefs {
+    final manager = $$AccountPeriodsTableTableManager(
+      $_db,
+      $_db.accountPeriods,
+    ).filter((f) => f.accountId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_accountPeriodsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$AccountsTableFilterComposer
+    extends Composer<_$LocalDatabase, $AccountsTable> {
+  $$AccountsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<Types, Types, int> get type =>
+      $composableBuilder(
+        column: $table.type,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  $$BudgetCategoriesTableFilterComposer get catId {
+    final $$BudgetCategoriesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.catId,
+      referencedTable: $db.budgetCategories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BudgetCategoriesTableFilterComposer(
+            $db: $db,
+            $table: $db.budgetCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> accountPeriodsRefs(
+    Expression<bool> Function($$AccountPeriodsTableFilterComposer f) f,
+  ) {
+    final $$AccountPeriodsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.accountPeriods,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountPeriodsTableFilterComposer(
+            $db: $db,
+            $table: $db.accountPeriods,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$AccountsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $AccountsTable> {
+  $$AccountsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$BudgetCategoriesTableOrderingComposer get catId {
+    final $$BudgetCategoriesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.catId,
+      referencedTable: $db.budgetCategories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BudgetCategoriesTableOrderingComposer(
+            $db: $db,
+            $table: $db.budgetCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AccountsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $AccountsTable> {
+  $$AccountsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<Types, int> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  $$BudgetCategoriesTableAnnotationComposer get catId {
+    final $$BudgetCategoriesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.catId,
+      referencedTable: $db.budgetCategories,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$BudgetCategoriesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.budgetCategories,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> accountPeriodsRefs<T extends Object>(
+    Expression<T> Function($$AccountPeriodsTableAnnotationComposer a) f,
+  ) {
+    final $$AccountPeriodsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.accountPeriods,
+      getReferencedColumn: (t) => t.accountId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountPeriodsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accountPeriods,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$AccountsTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $AccountsTable,
+          Account,
+          $$AccountsTableFilterComposer,
+          $$AccountsTableOrderingComposer,
+          $$AccountsTableAnnotationComposer,
+          $$AccountsTableCreateCompanionBuilder,
+          $$AccountsTableUpdateCompanionBuilder,
+          (Account, $$AccountsTableReferences),
+          Account,
+          PrefetchHooks Function({bool catId, bool accountPeriodsRefs})
+        > {
+  $$AccountsTableTableManager(_$LocalDatabase db, $AccountsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer:
+              () => $$AccountsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer:
+              () => $$AccountsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer:
+              () => $$AccountsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> catId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<Types> type = const Value.absent(),
+              }) => AccountsCompanion(
+                id: id,
+                catId: catId,
+                name: name,
+                type: type,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int catId,
+                required String name,
+                required Types type,
+              }) => AccountsCompanion.insert(
+                id: id,
+                catId: catId,
+                name: name,
+                type: type,
+              ),
+          withReferenceMapper:
+              (p0) =>
+                  p0
+                      .map(
+                        (e) => (
+                          e.readTable(table),
+                          $$AccountsTableReferences(db, table, e),
+                        ),
+                      )
+                      .toList(),
+          prefetchHooksCallback: ({catId = false, accountPeriodsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (accountPeriodsRefs) db.accountPeriods,
+              ],
+              addJoins: <
+                T extends TableManagerState<
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic
+                >
+              >(state) {
+                if (catId) {
+                  state =
+                      state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.catId,
+                            referencedTable: $$AccountsTableReferences
+                                ._catIdTable(db),
+                            referencedColumn:
+                                $$AccountsTableReferences._catIdTable(db).id,
+                          )
+                          as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (accountPeriodsRefs)
+                    await $_getPrefetchedData<
+                      Account,
+                      $AccountsTable,
+                      AccountPeriod
+                    >(
+                      currentTable: table,
+                      referencedTable: $$AccountsTableReferences
+                          ._accountPeriodsRefsTable(db),
+                      managerFromTypedResult:
+                          (p0) =>
+                              $$AccountsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).accountPeriodsRefs,
+                      referencedItemsForCurrentItem:
+                          (item, referencedItems) => referencedItems.where(
+                            (e) => e.accountId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AccountsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $AccountsTable,
+      Account,
+      $$AccountsTableFilterComposer,
+      $$AccountsTableOrderingComposer,
+      $$AccountsTableAnnotationComposer,
+      $$AccountsTableCreateCompanionBuilder,
+      $$AccountsTableUpdateCompanionBuilder,
+      (Account, $$AccountsTableReferences),
+      Account,
+      PrefetchHooks Function({bool catId, bool accountPeriodsRefs})
+    >;
+typedef $$AccountPeriodsTableCreateCompanionBuilder =
+    AccountPeriodsCompanion Function({
+      Value<int> id,
+      required int accountId,
+      required DateTime period,
+      required double balance,
+      required double deposits,
+      required double withdrawals,
+      required double interest,
+    });
+typedef $$AccountPeriodsTableUpdateCompanionBuilder =
+    AccountPeriodsCompanion Function({
+      Value<int> id,
+      Value<int> accountId,
+      Value<DateTime> period,
+      Value<double> balance,
+      Value<double> deposits,
+      Value<double> withdrawals,
+      Value<double> interest,
+    });
+
+final class $$AccountPeriodsTableReferences
+    extends
+        BaseReferences<_$LocalDatabase, $AccountPeriodsTable, AccountPeriod> {
+  $$AccountPeriodsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AccountsTable _accountIdTable(_$LocalDatabase db) =>
+      db.accounts.createAlias(
+        $_aliasNameGenerator(db.accountPeriods.accountId, db.accounts.id),
+      );
+
+  $$AccountsTableProcessedTableManager get accountId {
+    final $_column = $_itemColumn<int>('account_id')!;
+
+    final manager = $$AccountsTableTableManager(
+      $_db,
+      $_db.accounts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AccountPeriodsTableFilterComposer
+    extends Composer<_$LocalDatabase, $AccountPeriodsTable> {
+  $$AccountPeriodsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get period => $composableBuilder(
+    column: $table.period,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get deposits => $composableBuilder(
+    column: $table.deposits,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get withdrawals => $composableBuilder(
+    column: $table.withdrawals,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get interest => $composableBuilder(
+    column: $table.interest,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AccountsTableFilterComposer get accountId {
+    final $$AccountsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableFilterComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AccountPeriodsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $AccountPeriodsTable> {
+  $$AccountPeriodsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get period => $composableBuilder(
+    column: $table.period,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get balance => $composableBuilder(
+    column: $table.balance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get deposits => $composableBuilder(
+    column: $table.deposits,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get withdrawals => $composableBuilder(
+    column: $table.withdrawals,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get interest => $composableBuilder(
+    column: $table.interest,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AccountsTableOrderingComposer get accountId {
+    final $$AccountsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableOrderingComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AccountPeriodsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $AccountPeriodsTable> {
+  $$AccountPeriodsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get period =>
+      $composableBuilder(column: $table.period, builder: (column) => column);
+
+  GeneratedColumn<double> get balance =>
+      $composableBuilder(column: $table.balance, builder: (column) => column);
+
+  GeneratedColumn<double> get deposits =>
+      $composableBuilder(column: $table.deposits, builder: (column) => column);
+
+  GeneratedColumn<double> get withdrawals => $composableBuilder(
+    column: $table.withdrawals,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get interest =>
+      $composableBuilder(column: $table.interest, builder: (column) => column);
+
+  $$AccountsTableAnnotationComposer get accountId {
+    final $$AccountsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.accountId,
+      referencedTable: $db.accounts,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AccountsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.accounts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AccountPeriodsTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $AccountPeriodsTable,
+          AccountPeriod,
+          $$AccountPeriodsTableFilterComposer,
+          $$AccountPeriodsTableOrderingComposer,
+          $$AccountPeriodsTableAnnotationComposer,
+          $$AccountPeriodsTableCreateCompanionBuilder,
+          $$AccountPeriodsTableUpdateCompanionBuilder,
+          (AccountPeriod, $$AccountPeriodsTableReferences),
+          AccountPeriod,
+          PrefetchHooks Function({bool accountId})
+        > {
+  $$AccountPeriodsTableTableManager(
+    _$LocalDatabase db,
+    $AccountPeriodsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer:
+              () => $$AccountPeriodsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer:
+              () =>
+                  $$AccountPeriodsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer:
+              () => $$AccountPeriodsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> accountId = const Value.absent(),
+                Value<DateTime> period = const Value.absent(),
+                Value<double> balance = const Value.absent(),
+                Value<double> deposits = const Value.absent(),
+                Value<double> withdrawals = const Value.absent(),
+                Value<double> interest = const Value.absent(),
+              }) => AccountPeriodsCompanion(
+                id: id,
+                accountId: accountId,
+                period: period,
+                balance: balance,
+                deposits: deposits,
+                withdrawals: withdrawals,
+                interest: interest,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int accountId,
+                required DateTime period,
+                required double balance,
+                required double deposits,
+                required double withdrawals,
+                required double interest,
+              }) => AccountPeriodsCompanion.insert(
+                id: id,
+                accountId: accountId,
+                period: period,
+                balance: balance,
+                deposits: deposits,
+                withdrawals: withdrawals,
+                interest: interest,
+              ),
+          withReferenceMapper:
+              (p0) =>
+                  p0
+                      .map(
+                        (e) => (
+                          e.readTable(table),
+                          $$AccountPeriodsTableReferences(db, table, e),
+                        ),
+                      )
+                      .toList(),
+          prefetchHooksCallback: ({accountId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                T extends TableManagerState<
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic,
+                  dynamic
+                >
+              >(state) {
+                if (accountId) {
+                  state =
+                      state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.accountId,
+                            referencedTable: $$AccountPeriodsTableReferences
+                                ._accountIdTable(db),
+                            referencedColumn:
+                                $$AccountPeriodsTableReferences
+                                    ._accountIdTable(db)
+                                    .id,
+                          )
+                          as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AccountPeriodsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $AccountPeriodsTable,
+      AccountPeriod,
+      $$AccountPeriodsTableFilterComposer,
+      $$AccountPeriodsTableOrderingComposer,
+      $$AccountPeriodsTableAnnotationComposer,
+      $$AccountPeriodsTableCreateCompanionBuilder,
+      $$AccountPeriodsTableUpdateCompanionBuilder,
+      (AccountPeriod, $$AccountPeriodsTableReferences),
+      AccountPeriod,
+      PrefetchHooks Function({bool accountId})
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -1774,4 +3183,8 @@ class $LocalDatabaseManager {
       $$BudgetPeriodsTableTableManager(_db, _db.budgetPeriods);
   $$TransactionsTableTableManager get transactions =>
       $$TransactionsTableTableManager(_db, _db.transactions);
+  $$AccountsTableTableManager get accounts =>
+      $$AccountsTableTableManager(_db, _db.accounts);
+  $$AccountPeriodsTableTableManager get accountPeriods =>
+      $$AccountPeriodsTableTableManager(_db, _db.accountPeriods);
 }

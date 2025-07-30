@@ -38,6 +38,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
     if (budgetedAmount > 0) {
       await _updateBudgetedAmount(newCatID, budgetedAmount);
     }
+
+    if (type == Types.saving || type == Types.investment) {
+      await _addAccount(name, type, newCatID);
+    }
   }
 
   Future<void> _updateCategory(
@@ -51,6 +55,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   Future<void> _updateBudgetedAmount(int categoryId, double amount) async {
     await dataRepository.updateBudgetPeriod(categoryId, _currentPeriod, amount);
+  }
+
+  Future<void> _addAccount(String name, Types type, int catId) async {
+    final newAccountID = await dataRepository.addAccount(name, type, catId);
+    await dataRepository.updateAccountPeriod(
+      newAccountID,
+      _currentPeriod,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+    );
   }
 
   // --- Dialogs ---

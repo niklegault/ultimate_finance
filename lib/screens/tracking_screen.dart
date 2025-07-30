@@ -32,6 +32,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
       date: date,
       description: notes,
     );
+
+    if (type == Types.saving || type == Types.investment) {
+      if (amount > 0) {
+      } else {}
+    }
   }
 
   Future<void> _updateTransaction(Transaction transaction) async {
@@ -75,47 +80,65 @@ class _TrackingScreenState extends State<TrackingScreen> {
                             selectedCategory = null;
                           });
                         },
-                        items: Types.values
-                            .map((type) =>
-                                DropdownMenuItem(value: type, child: Text(type.name)))
-                            .toList(),
-                        validator: (v) =>
-                            v == null ? 'Please select a type' : null,
+                        items:
+                            Types.values
+                                .map(
+                                  (type) => DropdownMenuItem(
+                                    value: type,
+                                    child: Text(type.name),
+                                  ),
+                                )
+                                .toList(),
+                        validator:
+                            (v) => v == null ? 'Please select a type' : null,
                       ),
                       if (selectedType != null)
                         DropdownButtonFormField<BudgetCategory>(
-                          decoration:
-                              const InputDecoration(labelText: 'Category'),
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                          ),
                           value: selectedCategory,
-                          onChanged: (BudgetCategory? newValue) =>
-                              setState(() => selectedCategory = newValue),
-                          items: filteredCategories
-                              .map((cat) => DropdownMenuItem(
-                                  value: cat, child: Text(cat.name)))
-                              .toList(),
-                          validator: (v) =>
-                              v == null ? 'Please select a category' : null,
+                          onChanged:
+                              (BudgetCategory? newValue) =>
+                                  setState(() => selectedCategory = newValue),
+                          items:
+                              filteredCategories
+                                  .map(
+                                    (cat) => DropdownMenuItem(
+                                      value: cat,
+                                      child: Text(cat.name),
+                                    ),
+                                  )
+                                  .toList(),
+                          validator:
+                              (v) =>
+                                  v == null ? 'Please select a category' : null,
                         ),
                       TextFormField(
                         controller: amountController,
                         decoration: const InputDecoration(labelText: 'Amount'),
                         keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        validator: (v) => (v == null ||
-                                v.isEmpty ||
-                                double.tryParse(v) == null)
-                            ? 'Enter a valid amount'
-                            : null,
+                          decimal: true,
+                        ),
+                        validator:
+                            (v) =>
+                                (v == null ||
+                                        v.isEmpty ||
+                                        double.tryParse(v) == null)
+                                    ? 'Enter a valid amount'
+                                    : null,
                       ),
                       TextFormField(
                         controller: notesController,
-                        decoration:
-                            const InputDecoration(labelText: 'Notes (Optional)'),
+                        decoration: const InputDecoration(
+                          labelText: 'Notes (Optional)',
+                        ),
                       ),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(
-                            "Date: ${DateFormat.yMd().format(selectedDate)}"),
+                          "Date: ${DateFormat.yMd().format(selectedDate)}",
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final pickedDate = await showDatePicker(
@@ -135,8 +158,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
               ),
               actions: <Widget>[
                 TextButton(
-                    child: const Text('Cancel'),
-                    onPressed: () => Navigator.of(dialogContext).pop()),
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
                 TextButton(
                   child: const Text('Add'),
                   onPressed: () {
@@ -161,15 +185,20 @@ class _TrackingScreenState extends State<TrackingScreen> {
   }
 
   Future<void> _showEditItemDialog(
-      Transaction transaction, List<BudgetCategory> allCategories) async {
+    Transaction transaction,
+    List<BudgetCategory> allCategories,
+  ) async {
     final categoryMap = {for (var cat in allCategories) cat.id: cat};
     final editFormKey = GlobalKey<FormState>();
 
     Types? selectedType = transaction.type;
     BudgetCategory? selectedCategory = categoryMap[transaction.categoryId];
-    final amountController =
-        TextEditingController(text: transaction.amount.toStringAsFixed(2));
-    final notesController = TextEditingController(text: transaction.description);
+    final amountController = TextEditingController(
+      text: transaction.amount.toStringAsFixed(2),
+    );
+    final notesController = TextEditingController(
+      text: transaction.description,
+    );
     DateTime selectedDate = transaction.date;
 
     return showDialog<void>(
@@ -195,45 +224,70 @@ class _TrackingScreenState extends State<TrackingScreen> {
                           setState(() {
                             selectedType = newValue;
                             // Reset category if it's not valid for the new type
-                            if (filteredCategories.every((c) => c.id != selectedCategory?.id)) {
+                            if (filteredCategories.every(
+                              (c) => c.id != selectedCategory?.id,
+                            )) {
                               selectedCategory = null;
                             }
                           });
                         },
-                        items: Types.values
-                            .map((type) => DropdownMenuItem(
-                                value: type, child: Text(type.name)))
-                            .toList(),
+                        items:
+                            Types.values
+                                .map(
+                                  (type) => DropdownMenuItem(
+                                    value: type,
+                                    child: Text(type.name),
+                                  ),
+                                )
+                                .toList(),
                       ),
                       if (selectedType != null)
                         DropdownButtonFormField<BudgetCategory>(
-                          decoration:
-                              const InputDecoration(labelText: 'Category'),
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                          ),
                           value: selectedCategory,
-                          onChanged: (BudgetCategory? newValue) =>
-                              setState(() => selectedCategory = newValue),
-                          items: filteredCategories
-                              .map((cat) => DropdownMenuItem(
-                                  value: cat, child: Text(cat.name)))
-                              .toList(),
-                          validator: (v) => v == null ? 'Please select a category' : null,
+                          onChanged:
+                              (BudgetCategory? newValue) =>
+                                  setState(() => selectedCategory = newValue),
+                          items:
+                              filteredCategories
+                                  .map(
+                                    (cat) => DropdownMenuItem(
+                                      value: cat,
+                                      child: Text(cat.name),
+                                    ),
+                                  )
+                                  .toList(),
+                          validator:
+                              (v) =>
+                                  v == null ? 'Please select a category' : null,
                         ),
                       TextFormField(
                         controller: amountController,
                         decoration: const InputDecoration(labelText: 'Amount'),
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                        validator: (v) => (v == null || v.isEmpty || double.tryParse(v) == null) ? 'Enter a valid amount' : null,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator:
+                            (v) =>
+                                (v == null ||
+                                        v.isEmpty ||
+                                        double.tryParse(v) == null)
+                                    ? 'Enter a valid amount'
+                                    : null,
                       ),
                       TextFormField(
                         controller: notesController,
-                        decoration:
-                            const InputDecoration(labelText: 'Notes (Optional)'),
+                        decoration: const InputDecoration(
+                          labelText: 'Notes (Optional)',
+                        ),
                       ),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(
-                            "Date: ${DateFormat.yMd().format(selectedDate)}"),
+                          "Date: ${DateFormat.yMd().format(selectedDate)}",
+                        ),
                         trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final pickedDate = await showDatePicker(
@@ -263,8 +317,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 ),
                 const Spacer(),
                 TextButton(
-                    child: const Text('Cancel'),
-                    onPressed: () => Navigator.of(dialogContext).pop()),
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
                 TextButton(
                   child: const Text('Save'),
                   onPressed: () {
@@ -313,13 +368,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
           backgroundColor: color,
           child: Icon(icon, color: Colors.white),
         ),
-        title: Text(category.name,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          category.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Text(DateFormat.yMMMd().format(transaction.date)),
         trailing: Text(
           "$sign\$${transaction.amount.toStringAsFixed(2)}",
           style: TextStyle(
-              fontWeight: FontWeight.bold, color: color, fontSize: 16),
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontSize: 16,
+          ),
         ),
         onTap: () {
           _showEditItemDialog(transaction, allCategories);
@@ -347,16 +407,20 @@ class _TrackingScreenState extends State<TrackingScreen> {
           builder: (context, transactionsSnapshot) {
             // Use the data if available, otherwise an empty list.
             final allTransactions = transactionsSnapshot.data ?? [];
-            
+
             // Sort transactions by date, most recent first.
             allTransactions.sort((a, b) => b.date.compareTo(a.date));
 
-            final monthlyTransactions = allTransactions.where((t) {
-              final now = DateTime.now();
-              return t.date.year == now.year && t.date.month == now.month;
-            }).toList();
+            final monthlyTransactions =
+                allTransactions.where((t) {
+                  final now = DateTime.now();
+                  return t.date.year == now.year && t.date.month == now.month;
+                }).toList();
 
-            final monthBalance = monthlyTransactions.fold<double>(0.0, (sum, t) {
+            final monthBalance = monthlyTransactions.fold<double>(0.0, (
+              sum,
+              t,
+            ) {
               final category = categoryMap[t.categoryId];
               if (category?.type == Types.income) return sum + t.amount;
               if (category?.type == Types.expense) return sum - t.amount;
@@ -366,7 +430,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
             return Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 8.0, right: 8.0, top: 48.0, bottom: 8.0),
+                  padding: const EdgeInsets.only(
+                    left: 8.0,
+                    right: 8.0,
+                    top: 48.0,
+                    bottom: 8.0,
+                  ),
                   child: Row(
                     children: [
                       InformationBox(
@@ -390,7 +459,11 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     itemCount: allTransactions.length,
                     itemBuilder: (context, index) {
                       final transaction = allTransactions[index];
-                      return _buildTrackedItem(transaction, categoryMap, allCategories);
+                      return _buildTrackedItem(
+                        transaction,
+                        categoryMap,
+                        allCategories,
+                      );
                     },
                   ),
                 ),

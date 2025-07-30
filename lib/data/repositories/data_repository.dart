@@ -3,12 +3,13 @@ import "package:ultimate_finance/models/budget_category.dart";
 import "package:ultimate_finance/models/transaction.dart";
 import "package:ultimate_finance/data/repositories/abstract_data_repository.dart";
 import "package:ultimate_finance/data/datasources/abstract_local_data_source.dart";
+import "package:ultimate_finance/models/account.dart";
 
 class DataRepository implements IDataRepository {
   final ILocalDataSource _localDataSource;
 
   DataRepository({required ILocalDataSource localDataSource})
-      : _localDataSource = localDataSource;
+    : _localDataSource = localDataSource;
 
   @override
   Stream<List<BudgetCategory>> watchAllBudgetCategories() {
@@ -36,8 +37,16 @@ class DataRepository implements IDataRepository {
   }
 
   @override
-  Future<void> updateBudgetPeriod(int categoryId, DateTime period, double budgetedAmount) {
-    return _localDataSource.updateBudgetPeriod(categoryId, period, budgetedAmount);
+  Future<void> updateBudgetPeriod(
+    int categoryId,
+    DateTime period,
+    double budgetedAmount,
+  ) {
+    return _localDataSource.updateBudgetPeriod(
+      categoryId,
+      period,
+      budgetedAmount,
+    );
   }
 
   @override
@@ -64,11 +73,55 @@ class DataRepository implements IDataRepository {
 
   @override
   Future<void> updateTransaction(Transaction transaction) {
-    return _localDataSource.updateTransaction(transaction); 
+    return _localDataSource.updateTransaction(transaction);
   }
 
   @override
   Future<void> deleteTransaction(int id) {
     return _localDataSource.deleteTransaction(id);
+  }
+
+  @override
+  Stream<List<Account>> watchAllAccounts() {
+    return _localDataSource.watchAllAccounts();
+  }
+
+  @override
+  Future<int> addAccount(String name, Types type, int catId) {
+    return _localDataSource.addAccount(name, type, catId);
+  }
+
+  @override
+  Future<void> updateAccount(Account account) {
+    return _localDataSource.updateAccount(account);
+  }
+
+  @override
+  Future<void> deleteAccount(int id) {
+    return _localDataSource.deleteAccount(id);
+  }
+
+  @override
+  Stream<List<AccountPeriod>> watchAccountPeriodsForMonth(DateTime month) {
+    return _localDataSource.watchAccountPeriodsForMonth(month);
+  }
+
+  @override
+  Future<void> updateAccountPeriod(
+    int accountId,
+    DateTime period,
+    double balance,
+    double deposit,
+    double withdrawal,
+    double interest,
+  ) {
+    return _localDataSource.updateAccountPeriod(
+      accountId,
+      period,
+      balance,
+      deposit,
+      withdrawal,
+      interest,
+    );
   }
 }

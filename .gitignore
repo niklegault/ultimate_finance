@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/lib/data/datasources/local_data_source.g.dart
 
 # Symbolication related
 app.*.symbols

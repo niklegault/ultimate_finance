@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:ultimate_finance/data/repositories/abstract_data_repository.dart';
 import 'package:ultimate_finance/models/budget_category.dart';
+import 'package:ultimate_finance/models/account.dart';
 import 'package:ultimate_finance/models/types.dart';
 import 'package:ultimate_finance/theme/app_theme.dart';
 import 'package:ultimate_finance/widgets/period_selector.dart';
-
-List<BudgetCategory> _allBudgetCategories = [];
+import 'package:ultimate_finance/service_locator.dart';
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -14,253 +15,136 @@ class BudgetScreen extends StatefulWidget {
 }
 
 class _BudgetScreenState extends State<BudgetScreen> {
-  DateTime? _currentPeriod;
-
-  late List<BudgetCategory> _incomeCategories;
-  late double _totalIncome;
-  late List<BudgetCategory> _expenseCategories;
-  late double _totalExpenses;
-  late List<BudgetCategory> _savingCategories;
-  late double _totalSavings;
-  late List<BudgetCategory> _investmentCategories;
-  late double _totalInvestments;
-  late double _unallocatedIncome;
-
-  // Controller for Adding a new category
+  DateTime _currentPeriod = DateTime.now();
   final _formKey = GlobalKey<FormState>();
-  String? _newCategoryName;
-  double? _budgetedAmount;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentPeriod = null;
-    _filterCategorioes();
-  }
 
   void _handlePeriodChange(DateTime? newPeriod) {
     setState(() {
-      _currentPeriod = newPeriod;
+      // Use the current month if null is passed, otherwise use the selected month.
+      _currentPeriod = newPeriod ?? DateTime.now();
     });
   }
 
-  void _filterCategorioes() {
-    _incomeCategories =
-        _allBudgetCategories
-            .where((category) => category.type == Types.income)
-            .toList();
-    _expenseCategories =
-        _allBudgetCategories
-            .where((category) => category.type == Types.expense)
-            .toList();
-    _savingCategories =
-        _allBudgetCategories
-            .where((category) => category.type == Types.saving)
-            .toList();
-    _investmentCategories =
-        _allBudgetCategories
-            .where((category) => category.type == Types.investment)
-            .toList();
+  // --- Database Methods ---
+  Future<void> _addCategory(
+    Types type,
+    String name,
+    double budgetedAmount,
+  ) async {
+    // We first add the category to get its ID, then add the budgeted amount for the current month.
+    // In a real app, you might want to wrap this in a transaction.
+    final newCatID = await dataRepository.addBudgetCategory(name, type);
+    // This is a simplified approach. A more robust way would be to get the newly created category's ID
+    // and then use it to add the budgeted amount. For now, we'll add the amount in the dialog.
+    if (budgetedAmount > 0) {
+      await _updateBudgetedAmount(newCatID, budgetedAmount);
+    }
+
+    if (type == Types.saving || type == Types.investment) {
+      await _addAccount(name, type, newCatID);
+    }
   }
 
-  void _calculateTotals() {
-    _totalIncome = _incomeCategories.fold(
-      0.0,
-      (sum, category) =>
-          sum +
-          (category
-                  .getPeriod(_currentPeriod ?? DateTime.now())
-                  ?.budgetedAmount ??
-              0.0),
-    );
-    _totalExpenses = _expenseCategories.fold(
-      0.0,
-      (sum, category) =>
-          sum +
-          (category
-                  .getPeriod(_currentPeriod ?? DateTime.now())
-                  ?.budgetedAmount ??
-              0.0),
-    );
-    _totalSavings = _savingCategories.fold(
-      0.0,
-      (sum, category) =>
-          sum +
-          (category
-                  .getPeriod(_currentPeriod ?? DateTime.now())
-                  ?.budgetedAmount ??
-              0.0),
-    );
-    _totalInvestments = _investmentCategories.fold(
-      0.0,
-      (sum, category) =>
-          sum +
-          (category
-                  .getPeriod(_currentPeriod ?? DateTime.now())
-                  ?.budgetedAmount ??
-              0.0),
-    );
-    _unallocatedIncome =
-        _totalIncome - _totalExpenses - _totalSavings - _totalInvestments;
+  Future<void> _updateCategory(
+    BudgetCategory category,
+    double budgetedAmount,
+  ) async {
+    // Update the category and its budgeted amount.
+    await dataRepository.updateBudgetCategory(category);
+    if (category.type == Types.saving || category.type == Types.investment) {
+      // Update the account associated with this category.
+      final account = await dataRepository.getAccountByCategoryId(category.id);
+      await _updateAccount(account, category.id, category.name);
+    }
+    await _updateBudgetedAmount(category.id, budgetedAmount);
   }
 
-  BudgetCategory _addCategory(Types type, String name) {
-    BudgetCategory newCategory = BudgetCategory(name: name, type: type);
-    setState(() {
-      _allBudgetCategories.add(newCategory);
-      _filterCategorioes();
-    });
-    return newCategory;
+  Future<void> _updateBudgetedAmount(int categoryId, double amount) async {
+    await dataRepository.updateBudgetPeriod(categoryId, _currentPeriod, amount);
   }
 
-  Future<void> _showEditCategoryDialog(BudgetCategory category) async {
-    String updateCategoryName = category.name;
-    double? updatedBudgetedAmount =
-        category.getPeriod(_currentPeriod ?? DateTime.now())?.budgetedAmount;
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Edit ${category.type.name} Category'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: ListBody(
-                children: <Widget>[
-                  TextFormField(
-                    initialValue: category.name,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter category name',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a category name';
-                      }
-                      return null;
-                    },
-                    onSaved: (value) {
-                      updateCategoryName = value!;
-                    },
-                  ),
-                  TextFormField(
-                    initialValue: updatedBudgetedAmount?.toString() ?? '0.0',
-                    decoration: const InputDecoration(
-                      hintText: 'Enter budgeted amount',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a budgeted amount';
-                      }
-                      return null;
-                    },
-                    onSaved: (value) {
-                      updatedBudgetedAmount = double.tryParse(value!);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Update'),
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  _formKey.currentState!.save();
-                  setState(() {
-                    var updatedCategory = category;
-                    updatedCategory.name = updateCategoryName;
-
-                    updatedCategory
-                        .getPeriod(_currentPeriod ?? DateTime.now())
-                        ?.setBudgetedAmount(updatedBudgetedAmount ?? 0.00);
-
-                    _allBudgetCategories.remove(category);
-                    _allBudgetCategories.add(updatedCategory);
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-          ],
-        );
-      },
+  Future<void> _addAccount(String name, Types type, int catId) async {
+    final newAccountID = await dataRepository.addAccount(name, type, catId);
+    await dataRepository.updateAccountPeriod(
+      newAccountID,
+      _currentPeriod,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
     );
   }
 
+  Future<void> _updateAccount(
+    Account account,
+    int categoryId,
+    String name,
+  ) async {
+    final updatedAccount = account.copyWith(name: name, categoryId: categoryId);
+    await dataRepository.updateAccount(updatedAccount);
+  }
+
+  // --- Dialogs ---
   Future<void> _showAddCategoryDialog(Types type) async {
-    _newCategoryName = null;
-    _budgetedAmount = 0.0;
+    final nameController = TextEditingController();
+    final amountController = TextEditingController();
+
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: Text('Add New ${type.name} Category'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: ListBody(
-                children: <Widget>[
-                  TextFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Enter category name',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a category name';
-                      }
-                      return null;
-                    },
-                    onSaved: (value) {
-                      _newCategoryName = value;
-                    },
+          content: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Category Name'),
+                  validator:
+                      (value) =>
+                          (value == null || value.isEmpty)
+                              ? 'Please enter a name'
+                              : null,
+                ),
+                TextFormField(
+                  controller: amountController,
+                  decoration: const InputDecoration(
+                    labelText: 'Budgeted Amount',
                   ),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                      hintText: 'Enter budgeted amount',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a budgeted amount';
-                      }
-                      return null;
-                    },
-                    onSaved: (value) {
-                      _budgetedAmount = double.tryParse(value!);
-                    },
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
                   ),
-                ],
-              ),
+                  validator: (value) {
+                    if (value == null ||
+                        value.isEmpty ||
+                        double.tryParse(value) == null) {
+                      return 'Please enter a valid amount';
+                    }
+                    return null;
+                  },
+                ),
+              ],
             ),
           ),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             TextButton(
               child: const Text('Add'),
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
-                  _formKey.currentState!.save();
-                  if (_newCategoryName != null) {
-                    var addedCategory = _addCategory(type, _newCategoryName!);
-                    addedCategory.addPeriod(
-                      _currentPeriod ?? DateTime.now(),
-                      _budgetedAmount ?? 0.0,
-                    );
-                  }
-                  Navigator.of(context).pop();
+                  final name = nameController.text;
+                  final amount = double.parse(amountController.text);
+                  _addCategory(type, name, amount);
+                  // After adding, we would ideally get the new category's ID
+                  // and call _updateBudgetedAmount. This part of the logic
+                  // will be more robust as the repository evolves.
+                  Navigator.of(dialogContext).pop();
                 }
               },
             ),
@@ -270,80 +154,146 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  Widget _buildCategorySection({
-    required String title,
-    required List<BudgetCategory> categories,
-    required Types type,
-    required Color sectionColour,
-  }) {
-    return Card(
-      margin: const EdgeInsets.all(8.0),
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        leading: Icon(
-          type == Types.income
-              ? Icons.account_balance
-              : type == Types.expense
-              ? Icons.shopping_cart_checkout
-              : type == Types.saving
-              ? Icons.savings
-              : Icons.trending_up,
-          color: sectionColour,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: sectionColour,
-          ),
-        ),
-        trailing: Text(
-          '\$ ${type == Types.income
-              ? _totalIncome
-              : type == Types.expense
-              ? _totalExpenses
-              : type == Types.saving
-              ? _totalSavings
-              : _totalInvestments}',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: sectionColour,
-          ),
-        ),
-        children: <Widget>[
-          ...categories.map(
-            (category) => ListTile(
-              title: Text(category.name),
-              onTap: () {
-                _showEditCategoryDialog(category);
-              },
-              trailing: Text(
-                '\$ ${category.getPeriod(_currentPeriod ?? DateTime.now())?.budgetedAmount ?? '0.00'}',
-                style: TextStyle(fontSize: 16),
+  Future<void> _showEditCategoryDialog(
+    BudgetCategory category,
+    BudgetPeriod? budgetedAmount,
+  ) async {
+    final nameController = TextEditingController(text: category.name);
+    Types selectedType = category.type;
+    final amountController = TextEditingController(
+      text: budgetedAmount?.budgetedAmount.toStringAsFixed(2) ?? '0.00',
+    );
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Category'),
+              content: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Category Name',
+                      ),
+                      validator:
+                          (value) =>
+                              (value == null || value.isEmpty)
+                                  ? 'Please enter a name'
+                                  : null,
+                    ),
+                    DropdownButtonFormField<Types>(
+                      decoration: const InputDecoration(labelText: 'Type'),
+                      value: selectedType,
+                      items:
+                          Types.values
+                              .map(
+                                (type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type.name),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (Types? newValue) {
+                        if (newValue != null) {
+                          setState(() => selectedType = newValue);
+                        }
+                      },
+                    ),
+                    TextFormField(
+                      controller: amountController,
+                      decoration: const InputDecoration(
+                        labelText: 'Budgeted Amount',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) {
+                        if (value == null ||
+                            value.isEmpty ||
+                            double.tryParse(value) == null) {
+                          return 'Please enter a valid amount';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-          ListTile(
-            leading: Icon(Icons.add, color: sectionColour),
-            title: Text(
-              'Add New $title Category',
-              style: TextStyle(color: sectionColour),
-            ),
-            onTap: () {
-              _showAddCategoryDialog(type);
-            },
-          ),
-        ],
-      ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () {
+                    // Confirm deletion
+                    showDialog(
+                      context: dialogContext,
+                      builder:
+                          (context) => AlertDialog(
+                            title: const Text('Delete Category'),
+                            content: const Text(
+                              'Are you sure you want to delete this category?',
+                            ),
+                            actions: [
+                              TextButton(
+                                child: const Text('Cancel'),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                              TextButton(
+                                child: const Text('Delete'),
+                                onPressed: () {
+                                  dataRepository.deleteBudgetCategory(
+                                    category.id,
+                                  );
+                                  Navigator.of(
+                                    context,
+                                  ).pop(); // Close confirmation dialog
+                                  Navigator.of(
+                                    dialogContext,
+                                  ).pop(); // Close edit dialog
+                                },
+                              ),
+                            ],
+                          ),
+                    );
+                  },
+                ),
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
+                TextButton(
+                  child: const Text('Save'),
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      final updatedCategory = category.copyWith(
+                        name: nameController.text,
+                        type: selectedType,
+                      );
+                      final newAmount = double.parse(amountController.text);
+                      _updateCategory(updatedCategory, newAmount);
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
+  // --- Build Method ---
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
-    _calculateTotals();
+    final financialTheme =
+        Theme.of(context).extension<FinancialThemeExtension>()!;
 
     return Column(
       children: [
@@ -355,54 +305,197 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ),
         ),
         const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-          child: Text(
-            _unallocatedIncome == 0
-                ? 'Budget is Balanced'
-                : _unallocatedIncome > 0
-                ? 'Unallocated Income: \$ ${_unallocatedIncome.abs()}'
-                : 'Overallocated Income: \$ ${_unallocatedIncome.abs()}',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: _unallocatedIncome == 0 ? theme.income : theme.expense,
-            ),
-          ),
-        ),
-        const Divider(height: 1),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(8.0),
-            children: <Widget>[
-              _buildCategorySection(
-                title: 'Income',
-                categories: _incomeCategories,
-                type: Types.income,
-                sectionColour: theme.income,
-              ),
-              _buildCategorySection(
-                title: 'Expenses',
-                categories: _expenseCategories,
-                type: Types.expense,
-                sectionColour: theme.expense,
-              ),
-              _buildCategorySection(
-                title: 'Savings',
-                categories: _savingCategories,
-                type: Types.saving,
-                sectionColour: theme.savings,
-              ),
-              _buildCategorySection(
-                title: 'Investments',
-                categories: _investmentCategories,
-                type: Types.investment,
-                sectionColour: theme.investment,
-              ),
-            ],
+          // This top-level StreamBuilder gets all categories once.
+          child: StreamBuilder<List<BudgetCategory>>(
+            stream: dataRepository.watchAllBudgetCategories(),
+            builder: (context, categoriesSnapshot) {
+              if (!categoriesSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final allCategories = categoriesSnapshot.data!;
+
+              // This nested StreamBuilder gets the budgeted amounts for the selected month.
+              return StreamBuilder<List<BudgetPeriod>>(
+                stream: dataRepository.watchBudgetPeriodsForMonth(
+                  _currentPeriod,
+                ),
+                builder: (context, amountsSnapshot) {
+                  final budgetedAmounts = amountsSnapshot.data ?? [];
+
+                  // Create a map for quick lookup of budgeted amounts by category ID.
+                  final amountMap = {
+                    for (var e in budgetedAmounts) e.categoryId: e,
+                  };
+
+                  // Filter categories into their respective types.
+                  final incomeCategories =
+                      allCategories
+                          .where((c) => c.type == Types.income)
+                          .toList();
+                  final expenseCategories =
+                      allCategories
+                          .where((c) => c.type == Types.expense)
+                          .toList();
+                  final savingCategories =
+                      allCategories
+                          .where((c) => c.type == Types.saving)
+                          .toList();
+                  final investmentCategories =
+                      allCategories
+                          .where((c) => c.type == Types.investment)
+                          .toList();
+
+                  // Calculate totals using the amountMap.
+                  final totalIncome = incomeCategories.fold(
+                    0.0,
+                    (sum, cat) =>
+                        sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0),
+                  );
+                  final totalExpenses = expenseCategories.fold(
+                    0.0,
+                    (sum, cat) =>
+                        sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0),
+                  );
+                  final totalSavings = savingCategories.fold(
+                    0.0,
+                    (sum, cat) =>
+                        sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0),
+                  );
+                  final totalInvestments = investmentCategories.fold(
+                    0.0,
+                    (sum, cat) =>
+                        sum + (amountMap[cat.id]?.budgetedAmount ?? 0.0),
+                  );
+                  final unallocatedIncome =
+                      totalIncome -
+                      totalExpenses -
+                      totalSavings -
+                      totalInvestments;
+
+                  return Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          unallocatedIncome == 0
+                              ? 'Budget is Balanced'
+                              : 'Unallocated: \$${unallocatedIncome.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color:
+                                unallocatedIncome >= 0
+                                    ? financialTheme.income
+                                    : financialTheme.expense,
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 1),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.all(8.0),
+                          children: <Widget>[
+                            _buildCategorySection(
+                              title: 'Income',
+                              categories: incomeCategories,
+                              amountMap: amountMap,
+                              type: Types.income,
+                              sectionColour: financialTheme.income,
+                              total: totalIncome,
+                            ),
+                            _buildCategorySection(
+                              title: 'Expenses',
+                              categories: expenseCategories,
+                              amountMap: amountMap,
+                              type: Types.expense,
+                              sectionColour: financialTheme.expense,
+                              total: totalExpenses,
+                            ),
+                            _buildCategorySection(
+                              title: 'Savings',
+                              categories: savingCategories,
+                              amountMap: amountMap,
+                              type: Types.saving,
+                              sectionColour: financialTheme.savings,
+                              total: totalSavings,
+                            ),
+                            _buildCategorySection(
+                              title: 'Investments',
+                              categories: investmentCategories,
+                              amountMap: amountMap,
+                              type: Types.investment,
+                              sectionColour: financialTheme.investment,
+                              total: totalInvestments,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCategorySection({
+    required String title,
+    required List<BudgetCategory> categories,
+    required Map<int, BudgetPeriod> amountMap,
+    required Types type,
+    required Color sectionColour,
+    required double total,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      child: ExpansionTile(
+        initiallyExpanded: true,
+        leading: Icon(
+          type == Types.income ? Icons.arrow_downward : Icons.arrow_upward,
+          color: sectionColour,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: sectionColour,
+          ),
+        ),
+        trailing: Text(
+          '\$${total.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: sectionColour,
+          ),
+        ),
+        children: <Widget>[
+          ...categories.map((category) {
+            final budgetedAmount = amountMap[category.id];
+            return ListTile(
+              title: Text(category.name),
+              onTap: () => _showEditCategoryDialog(category, budgetedAmount),
+              trailing: Text(
+                '\$${budgetedAmount?.budgetedAmount.toStringAsFixed(2) ?? '0.00'}',
+                style: const TextStyle(fontSize: 16),
+              ),
+            );
+          }),
+          ListTile(
+            leading: Icon(Icons.add, color: sectionColour),
+            title: Text(
+              'Add New $title Category',
+              style: TextStyle(color: sectionColour),
+            ),
+            onTap: () => _showAddCategoryDialog(type),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:ultimate_finance/models/budget_category.dart';
 import 'package:ultimate_finance/models/transaction.dart';
 import 'package:ultimate_finance/models/types.dart';
+import 'package:ultimate_finance/service_locator.dart';
 import 'package:ultimate_finance/theme/app_theme.dart';
 import 'package:ultimate_finance/widgets/information_box.dart';
-
-List<BudgetCategory> _allBudgetCategories = [
-  BudgetCategory(name: 'Salary', type: Types.income),
-  BudgetCategory(name: 'Groceries', type: Types.expense),
-  BudgetCategory(name: 'Savings Account', type: Types.saving),
-  BudgetCategory(name: 'Stocks', type: Types.investment),
-  BudgetCategory(name: 'Dining Out', type: Types.expense),
-];
-
-List<Transaction> _allTransactions = [];
 
 class TrackingScreen extends StatefulWidget {
   const TrackingScreen({super.key});
@@ -24,200 +16,165 @@ class TrackingScreen extends StatefulWidget {
 
 class _TrackingScreenState extends State<TrackingScreen> {
   final _formKey = GlobalKey<FormState>();
-  Types? _itemType;
-  BudgetCategory? _itemCategory;
-  double _amount = 0.00;
-  DateTime _date = DateTime.now();
-  String _notes = '';
 
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  Widget _buildTrackedItem(Transaction transaction) {
-    return GestureDetector(
-      onTap: () => _showEditItemDialog(transaction),
-      child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        elevation: 2,
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: _getTypeColor(transaction.type),
-            child: Icon(_getTypeIcon(transaction.type), color: Colors.white),
-          ),
-          title: Text(
-            transaction.category.name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${transaction.type.toString().split('.').last} • ${_formatDate(transaction.date)}",
-                style: const TextStyle(fontSize: 12),
-              ),
-              if (transaction.description != null &&
-                  transaction.description!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    transaction.description!,
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                ),
-            ],
-          ),
-          trailing: Text(
-            "${transaction.type == Types.expense ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: _getTypeColor(transaction.type),
-              fontSize: 16,
-            ),
-          ),
-        ),
-      ),
+  // --- Database Methods ---
+  Future<void> _addTransaction({
+    required Types type,
+    required int categoryId,
+    required double amount,
+    required DateTime date,
+    required String notes,
+  }) async {
+    await dataRepository.addTransaction(
+      type: type,
+      categoryId: categoryId,
+      amount: amount,
+      date: date,
+      description: notes,
     );
+
+    if (type == Types.saving || type == Types.investment) {
+      if (amount > 0) {
+        final account = await dataRepository.getAccountPeriodFromCategoryId(
+          categoryId,
+          date,
+        );
+        await dataRepository.updateAccountPeriod(
+          account.id,
+          account.period,
+          account.balance,
+          account.deposits + amount,
+          account.withdrawals,
+          account.interest,
+        );
+      } else {
+        final account = await dataRepository.getAccountPeriodFromCategoryId(
+          categoryId,
+          date,
+        );
+        await dataRepository.updateAccountPeriod(
+          account.id,
+          account.period,
+          account.balance,
+          account.deposits,
+          account.withdrawals + amount.abs(),
+          account.interest,
+        );
+      }
+    }
   }
 
-  Future<void> _showEditItemDialog(Transaction transaction) async {
-    Types? editType = transaction.type;
-    BudgetCategory? editCategory = transaction.category;
-    double editAmount = transaction.amount;
-    DateTime editDate = transaction.date;
-    String editNotes = transaction.description ?? '';
+  Future<void> _updateTransaction(Transaction transaction) async {
+    await dataRepository.updateTransaction(transaction);
+  }
 
-    final editFormKey = GlobalKey<FormState>();
+  Future<void> _deleteTransaction(int transactionId) async {
+    await dataRepository.deleteTransaction(transactionId);
+  }
 
-    bool updated = false;
+  // --- Dialogs ---
+  Future<void> _showAddItemDialog(List<BudgetCategory> allCategories) async {
+    Types? selectedType;
+    BudgetCategory? selectedCategory;
+    final amountController = TextEditingController();
+    final notesController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
 
-    await showDialog<void>(
+    return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
+          builder: (context, setState) {
+            final filteredCategories =
+                allCategories.where((cat) => cat.type == selectedType).toList();
+
             return AlertDialog(
-              title: Text('Edit Item'),
+              title: const Text('Add New Transaction'),
               content: SingleChildScrollView(
                 child: Form(
-                  key: editFormKey,
+                  key: _formKey,
                   child: ListBody(
                     children: <Widget>[
                       DropdownButtonFormField<Types>(
-                        decoration: const InputDecoration(
-                          hintText: 'Select item type',
-                        ),
-                        value: editType,
-                        items:
-                            Types.values.map((type) {
-                              return DropdownMenuItem<Types>(
-                                value: type,
-                                child: Text(type.toString().split('.').last),
-                              );
-                            }).toList(),
+                        decoration: const InputDecoration(labelText: 'Type'),
+                        value: selectedType,
                         onChanged: (Types? newValue) {
                           setState(() {
-                            editType = newValue;
-                            editCategory = null;
+                            selectedType = newValue;
+                            selectedCategory = null;
                           });
                         },
-                        validator: (value) {
-                          if (value == null) {
-                            return 'Please select an item type';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          editType = value;
-                        },
-                      ),
-                      DropdownButtonFormField<BudgetCategory>(
-                        decoration: const InputDecoration(
-                          hintText: 'Select category',
-                        ),
-                        value: editCategory,
                         items:
-                            (editType == null
-                                    ? <BudgetCategory>[]
-                                    : _allBudgetCategories
-                                        .where((cat) => cat.type == editType)
-                                        .toList())
-                                .map((category) {
-                                  return DropdownMenuItem<BudgetCategory>(
-                                    value: category,
-                                    child: Text(category.name),
-                                  );
-                                })
+                            Types.values
+                                .map(
+                                  (type) => DropdownMenuItem(
+                                    value: type,
+                                    child: Text(type.name),
+                                  ),
+                                )
                                 .toList(),
-                        onChanged: (BudgetCategory? newValue) {
-                          setState(() {
-                            editCategory = newValue;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null) {
-                            return 'Please select a category';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          editCategory = value;
-                        },
+                        validator:
+                            (v) => v == null ? 'Please select a type' : null,
                       ),
-                      TextFormField(
-                        initialValue: editAmount.toString(),
-                        decoration: const InputDecoration(
-                          hintText: 'Enter item amount',
+                      if (selectedType != null)
+                        DropdownButtonFormField<BudgetCategory>(
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                          ),
+                          value: selectedCategory,
+                          onChanged:
+                              (BudgetCategory? newValue) =>
+                                  setState(() => selectedCategory = newValue),
+                          items:
+                              filteredCategories
+                                  .map(
+                                    (cat) => DropdownMenuItem(
+                                      value: cat,
+                                      child: Text(cat.name),
+                                    ),
+                                  )
+                                  .toList(),
+                          validator:
+                              (v) =>
+                                  v == null ? 'Please select a category' : null,
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter item amount';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          editAmount = double.tryParse(value!) ?? 0.00;
-                        },
-                        keyboardType: TextInputType.numberWithOptions(
+                      TextFormField(
+                        controller: amountController,
+                        decoration: const InputDecoration(labelText: 'Amount'),
+                        keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
+                        validator:
+                            (v) =>
+                                (v == null ||
+                                        v.isEmpty ||
+                                        double.tryParse(v) == null)
+                                    ? 'Enter a valid amount'
+                                    : null,
                       ),
-                      GestureDetector(
+                      TextFormField(
+                        controller: notesController,
+                        decoration: const InputDecoration(
+                          labelText: 'Notes (Optional)',
+                        ),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          "Date: ${DateFormat.yMd().format(selectedDate)}",
+                        ),
+                        trailing: const Icon(Icons.calendar_today),
                         onTap: () async {
                           final pickedDate = await showDatePicker(
                             context: context,
-                            initialDate: editDate,
+                            initialDate: selectedDate,
                             firstDate: DateTime(2000),
                             lastDate: DateTime(2100),
                           );
                           if (pickedDate != null) {
-                            setState(() {
-                              editDate = pickedDate;
-                            });
+                            setState(() => selectedDate = pickedDate);
                           }
-                        },
-                        child: AbsorbPointer(
-                          child: TextFormField(
-                            decoration: InputDecoration(
-                              hintText: 'Select date',
-                              suffixIcon: Icon(Icons.calendar_today),
-                            ),
-                            controller: TextEditingController(
-                              text:
-                                  "${editDate.year}-${editDate.month.toString().padLeft(2, '0')}-${editDate.day.toString().padLeft(2, '0')}",
-                            ),
-                          ),
-                        ),
-                      ),
-                      TextFormField(
-                        initialValue: editNotes,
-                        decoration: const InputDecoration(
-                          hintText: 'Enter notes (optional)',
-                        ),
-                        onSaved: (value) {
-                          editNotes = value ?? '';
                         },
                       ),
                     ],
@@ -227,22 +184,20 @@ class _TrackingScreenState extends State<TrackingScreen> {
               actions: <Widget>[
                 TextButton(
                   child: const Text('Cancel'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => Navigator.of(dialogContext).pop(),
                 ),
                 TextButton(
-                  child: const Text('Save'),
+                  child: const Text('Add'),
                   onPressed: () {
-                    if (editFormKey.currentState!.validate()) {
-                      editFormKey.currentState!.save();
-                      transaction.type = editType!;
-                      transaction.category = editCategory!;
-                      transaction.amount = editAmount;
-                      transaction.date = editDate;
-                      transaction.description = editNotes;
-                      updated = true;
-                      Navigator.of(context).pop();
+                    if (_formKey.currentState!.validate()) {
+                      _addTransaction(
+                        type: selectedType!,
+                        categoryId: selectedCategory!.id,
+                        amount: double.parse(amountController.text),
+                        date: selectedDate,
+                        notes: notesController.text,
+                      );
+                      Navigator.of(dialogContext).pop();
                     }
                   },
                 ),
@@ -252,13 +207,301 @@ class _TrackingScreenState extends State<TrackingScreen> {
         );
       },
     );
-    if (updated) {
-      setState(() {});
-    }
   }
 
-  Color _getTypeColor(Types type) {
+  Future<void> _showEditItemDialog(
+    Transaction transaction,
+    List<BudgetCategory> allCategories,
+  ) async {
+    final categoryMap = {for (var cat in allCategories) cat.id: cat};
+    final editFormKey = GlobalKey<FormState>();
+
+    Types? selectedType = transaction.type;
+    BudgetCategory? selectedCategory = categoryMap[transaction.categoryId];
+    final amountController = TextEditingController(
+      text: transaction.amount.toStringAsFixed(2),
+    );
+    final notesController = TextEditingController(
+      text: transaction.description,
+    );
+    DateTime selectedDate = transaction.date;
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            final filteredCategories =
+                allCategories.where((cat) => cat.type == selectedType).toList();
+
+            return AlertDialog(
+              title: const Text('Edit Transaction'),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: editFormKey,
+                  child: ListBody(
+                    children: <Widget>[
+                      DropdownButtonFormField<Types>(
+                        decoration: const InputDecoration(labelText: 'Type'),
+                        value: selectedType,
+                        onChanged: (Types? newValue) {
+                          setState(() {
+                            selectedType = newValue;
+                            // Reset category if it's not valid for the new type
+                            if (filteredCategories.every(
+                              (c) => c.id != selectedCategory?.id,
+                            )) {
+                              selectedCategory = null;
+                            }
+                          });
+                        },
+                        items:
+                            Types.values
+                                .map(
+                                  (type) => DropdownMenuItem(
+                                    value: type,
+                                    child: Text(type.name),
+                                  ),
+                                )
+                                .toList(),
+                      ),
+                      if (selectedType != null)
+                        DropdownButtonFormField<BudgetCategory>(
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                          ),
+                          value: selectedCategory,
+                          onChanged:
+                              (BudgetCategory? newValue) =>
+                                  setState(() => selectedCategory = newValue),
+                          items:
+                              filteredCategories
+                                  .map(
+                                    (cat) => DropdownMenuItem(
+                                      value: cat,
+                                      child: Text(cat.name),
+                                    ),
+                                  )
+                                  .toList(),
+                          validator:
+                              (v) =>
+                                  v == null ? 'Please select a category' : null,
+                        ),
+                      TextFormField(
+                        controller: amountController,
+                        decoration: const InputDecoration(labelText: 'Amount'),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator:
+                            (v) =>
+                                (v == null ||
+                                        v.isEmpty ||
+                                        double.tryParse(v) == null)
+                                    ? 'Enter a valid amount'
+                                    : null,
+                      ),
+                      TextFormField(
+                        controller: notesController,
+                        decoration: const InputDecoration(
+                          labelText: 'Notes (Optional)',
+                        ),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          "Date: ${DateFormat.yMd().format(selectedDate)}",
+                        ),
+                        trailing: const Icon(Icons.calendar_today),
+                        onTap: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (pickedDate != null) {
+                            setState(() => selectedDate = pickedDate);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                // DELETE BUTTON
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  color: Theme.of(context).colorScheme.error,
+                  onPressed: () {
+                    _deleteTransaction(transaction.id);
+                    Navigator.of(dialogContext).pop();
+                  },
+                ),
+                const Spacer(),
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
+                TextButton(
+                  child: const Text('Save'),
+                  onPressed: () {
+                    if (editFormKey.currentState!.validate()) {
+                      // Use copyWith to create a new immutable object
+                      final updatedTransaction = transaction.copyWith(
+                        type: selectedType,
+                        categoryId: selectedCategory!.id,
+                        amount: double.parse(amountController.text),
+                        date: selectedDate,
+                        description: notesController.text,
+                      );
+                      _updateTransaction(updatedTransaction);
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildTrackedItem(
+    Transaction transaction,
+    Map<int, BudgetCategory> categoryMap,
+    List<BudgetCategory> allCategories,
+  ) {
     final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
+    final category = categoryMap[transaction.categoryId];
+    if (category == null) {
+      return const SizedBox.shrink();
+    }
+
+    final color = _getTypeColor(category.type, theme);
+    final icon = _getTypeIcon(category.type);
+    final sign = category.type == Types.income ? '+' : '-';
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      elevation: 2,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: color,
+          child: Icon(icon, color: Colors.white),
+        ),
+        title: Text(
+          category.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(DateFormat.yMMMd().format(transaction.date)),
+        trailing: Text(
+          "$sign\$${transaction.amount.toStringAsFixed(2)}",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontSize: 16,
+          ),
+        ),
+        onTap: () {
+          _showEditItemDialog(transaction, allCategories);
+        },
+      ),
+    );
+  }
+
+  // --- Build Method ---
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<BudgetCategory>>(
+      stream: dataRepository.watchAllBudgetCategories(),
+      builder: (context, categoriesSnapshot) {
+        if (!categoriesSnapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final allCategories = categoriesSnapshot.data!;
+        final categoryMap = {for (var cat in allCategories) cat.id: cat};
+
+        // This nested StreamBuilder now watches the real transaction stream
+        return StreamBuilder<List<Transaction>>(
+          // --- THIS IS THE KEY FIX ---
+          stream: dataRepository.watchAllTransactions(),
+          builder: (context, transactionsSnapshot) {
+            // Use the data if available, otherwise an empty list.
+            final allTransactions = transactionsSnapshot.data ?? [];
+
+            // Sort transactions by date, most recent first.
+            allTransactions.sort((a, b) => b.date.compareTo(a.date));
+
+            final monthlyTransactions =
+                allTransactions.where((t) {
+                  final now = DateTime.now();
+                  return t.date.year == now.year && t.date.month == now.month;
+                }).toList();
+
+            final monthBalance = monthlyTransactions.fold<double>(0.0, (
+              sum,
+              t,
+            ) {
+              final category = categoryMap[t.categoryId];
+              if (category?.type == Types.income) return sum + t.amount;
+              if (category?.type == Types.expense) return sum - t.amount;
+              return sum; // Savings and Investments don't affect the balance
+            });
+
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 8.0,
+                    right: 8.0,
+                    top: 48.0,
+                    bottom: 8.0,
+                  ),
+                  child: Row(
+                    children: [
+                      InformationBox(
+                        label: "Transactions (This Month)",
+                        content: "${monthlyTransactions.length}",
+                      ),
+                      InformationBox(
+                        label: "Monthly Balance",
+                        content: "\$${monthBalance.toStringAsFixed(2)}",
+                      ),
+                    ],
+                  ),
+                ),
+                ListTile(
+                  title: const Icon(Icons.add),
+                  onTap: () => _showAddItemDialog(allCategories),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    itemCount: allTransactions.length,
+                    itemBuilder: (context, index) {
+                      final transaction = allTransactions[index];
+                      return _buildTrackedItem(
+                        transaction,
+                        categoryMap,
+                        allCategories,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // --- Helper Functions ---
+  Color _getTypeColor(Types type, FinancialThemeExtension theme) {
     switch (type) {
       case Types.income:
         return theme.income;
@@ -274,272 +517,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
   IconData _getTypeIcon(Types type) {
     switch (type) {
       case Types.income:
-        return Icons.account_balance;
+        return Icons.arrow_downward;
       case Types.expense:
-        return Icons.shopping_cart_checkout;
+        return Icons.arrow_upward;
       case Types.saving:
         return Icons.savings;
       case Types.investment:
         return Icons.trending_up;
     }
-  }
-
-  String _formatDate(DateTime date) {
-    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-  }
-
-  Transaction _addTransaction(
-    Types type,
-    BudgetCategory category,
-    double amount,
-    DateTime date, {
-    String notes = '',
-  }) {
-    final transaction = Transaction(
-      type: type,
-      category: category,
-      amount: amount,
-      date: date,
-      description: notes,
-    );
-    setState(() {
-      _allTransactions.add(transaction);
-    });
-    return transaction;
-  }
-
-  int get _monthlyTransactions {
-    final now = DateTime.now();
-    return _allTransactions
-        .where(
-          (transaction) =>
-              transaction.date.year == now.year &&
-              transaction.date.month == now.month,
-        )
-        .length;
-  }
-
-  double get _monthBalance {
-    final now = DateTime.now();
-    return _allTransactions
-        .where(
-          (transaction) =>
-              transaction.date.year == now.year &&
-              transaction.date.month == now.month,
-        )
-        .fold(0.0, (sum, transaction) {
-          if (transaction.type == Types.income) {
-            return sum + transaction.amount;
-          } else {
-            return sum - transaction.amount;
-          }
-        });
-  }
-
-  Future<void> _showAddItemDialog() {
-    _itemType = null;
-    _itemCategory = null;
-    _amount = 0.00;
-    _date = DateTime.now();
-    _notes = '';
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return AlertDialog(
-              title: Text('Add New Item'),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: _formKey,
-                  child: ListBody(
-                    children: <Widget>[
-                      DropdownButtonFormField<Types>(
-                        decoration: const InputDecoration(
-                          hintText: 'Select item type',
-                        ),
-                        value: _itemType,
-                        items:
-                            Types.values.map((type) {
-                              return DropdownMenuItem<Types>(
-                                value: type,
-                                child: Text(type.toString().split('.').last),
-                              );
-                            }).toList(),
-                        onChanged: (Types? newValue) {
-                          setState(() {
-                            _itemType = newValue;
-                            _itemCategory =
-                                null; // Reset category when type changes
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null) {
-                            return 'Please select an item type';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _itemType = value;
-                        },
-                      ),
-                      DropdownButtonFormField<BudgetCategory>(
-                        decoration: const InputDecoration(
-                          hintText: 'Select category',
-                        ),
-                        value: _itemCategory,
-                        items:
-                            (_itemType == null
-                                    ? <BudgetCategory>[]
-                                    : _allBudgetCategories
-                                        .where((cat) => cat.type == _itemType)
-                                        .toList())
-                                .map((category) {
-                                  return DropdownMenuItem<BudgetCategory>(
-                                    value: category,
-                                    child: Text(category.name),
-                                  );
-                                })
-                                .toList(),
-                        onChanged: (BudgetCategory? newValue) {
-                          setState(() {
-                            _itemCategory = newValue;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null) {
-                            return 'Please select a category';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _itemCategory = value;
-                        },
-                      ),
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          hintText: 'Enter item amount',
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter item amount';
-                          }
-                          return null;
-                        },
-                        onSaved: (value) {
-                          _amount = double.tryParse(value!) ?? 0.00;
-                        },
-                      ),
-                      GestureDetector(
-                        onTap: () async {
-                          final pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: _date,
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                          );
-                          if (pickedDate != null) {
-                            setState(() {
-                              _date = pickedDate;
-                            });
-                          }
-                        },
-                        child: AbsorbPointer(
-                          child: TextFormField(
-                            decoration: InputDecoration(
-                              hintText: 'Select date',
-                              suffixIcon: Icon(Icons.calendar_today),
-                            ),
-                            controller: TextEditingController(
-                              text:
-                                  "${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}",
-                            ),
-                          ),
-                        ),
-                      ),
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          hintText: 'Enter notes (optional)',
-                        ),
-                        onSaved: (value) {
-                          _notes = value ?? '';
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('Cancel'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: const Text('Add'),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      _formKey.currentState!.save();
-                      if (_itemType != null && _itemCategory != null) {
-                        _addTransaction(
-                          _itemType!,
-                          _itemCategory!,
-                          _amount,
-                          _date,
-                          notes: _notes,
-                        );
-                        Navigator.of(context).pop();
-                      }
-                    }
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildTrackedList() {
-    return Expanded(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children:
-            [
-              ...List<Transaction>.from(_allTransactions)
-                ..sort((a, b) => b.date.compareTo(a.date)),
-            ].map((transaction) => _buildTrackedItem(transaction)).toList(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            InformationBox(
-              label: "Tracked Transactions (this month)",
-              content: "$_monthlyTransactions",
-            ),
-            InformationBox(
-              label: "Monthly Balance",
-              content: "${_monthBalance}",
-            ),
-          ],
-        ),
-        ListTile(
-          title: Icon(Icons.add),
-          onTap: () {
-            _showAddItemDialog();
-          },
-        ),
-        _buildTrackedList(),
-      ],
-    );
   }
 }

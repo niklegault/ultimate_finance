@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ultimate_finance/theme/app_theme.dart';
 import 'package:ultimate_finance/widgets/period_selector.dart';
+import 'package:ultimate_finance/widgets/pie_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -11,6 +12,12 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   DateTime _currentPeriod = DateTime.now();
+
+  // SAMPLE VALUES
+  final incomeTotal = 6000.0;
+  final expenseTotal = 3000.0;
+  final savingsTotal = 2000.0;
+  final investmentTotal = 1000.0;
 
   void _handlePeriodChange(DateTime? newPeriod) {
     // Handle period change logic here
@@ -33,7 +40,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPeriodChanged: _handlePeriodChange,
           ),
         ),
-        const Center(child: Text('Welcome to the Dashboard Screen!')),
+        PieChart(
+          values: [incomeTotal, expenseTotal, savingsTotal, investmentTotal],
+          colors: [
+            financialTheme?.income ?? Colors.green,
+            financialTheme?.expense ?? Colors.red,
+            financialTheme?.savings ?? Colors.blue,
+            financialTheme?.investment ?? Colors.orange,
+          ],
+        ),
       ],
     );
   }

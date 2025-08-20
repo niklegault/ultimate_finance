@@ -2,8 +2,12 @@ import 'package:ultimate_finance/models/types.dart';
 import 'package:ultimate_finance/models/budget_category.dart';
 import 'package:ultimate_finance/models/transaction.dart';
 import 'package:ultimate_finance/models/account.dart';
+import 'package:ultimate_finance/models/dashboard_data.dart';
+import 'package:ultimate_finance/theme/app_theme.dart';
 
 abstract class IDataRepository {
+  Stream<DashboardData> watchDashboardData(DateTime period, FinancialThemeExtension theme);
+
   Stream<List<BudgetCategory>> watchAllBudgetCategories();
   Future<int> addBudgetCategory(String name, Types type);
   Future<void> updateBudgetCategory(BudgetCategory category);

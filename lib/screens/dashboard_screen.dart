@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:ultimate_finance/models/budget_category.dart';
 import 'package:ultimate_finance/models/transaction.dart';
 import 'package:ultimate_finance/models/types.dart';
+import 'package:ultimate_finance/models/dashboard_data.dart';
 import 'package:ultimate_finance/service_locator.dart';
 import 'package:ultimate_finance/theme/app_theme.dart';
 import 'package:ultimate_finance/widgets/pie_chart.dart';
 import 'package:ultimate_finance/widgets/period_selector.dart';
+import 'package:ultimate_finance/widgets/information_box.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -21,6 +23,112 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _currentPeriod = newPeriod ?? DateTime.now();
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
+
+    return Scaffold(
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 8, right: 8, top: 48, bottom: 8),
+            child: PeriodSelector(
+              selectedPeriod: _currentPeriod,
+              onPeriodChanged: _handlePeriodChange,
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: StreamBuilder<DashboardData>(
+              // Use the new, single stream from the repository
+              stream: dataRepository.watchDashboardData(_currentPeriod, theme),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                final data = snapshot.data!;
+
+                return ListView(
+                  padding: const EdgeInsets.all(8.0),
+                  children: [
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      InformationBox(
+                        label: 'Savings Rate',
+                        content: data.totalTrackedIncome > 0
+                          ? '${(((data.totalTrackedSavings + data.totalTrackedInvestments) / data.totalTrackedIncome) * 100).toStringAsFixed(1)}%'
+                          : 'N/A',
+                      ),
+                      InformationBox(
+                        label: 'Monthly Balance',
+                        content: data.totalTrackedIncome > 0
+                            ? (data.totalTrackedIncome - (data.totalTrackedExpenses + data.totalTrackedInvestments + data.totalTrackedSavings)).toStringAsFixed(2)
+                            : 'N/A',
+                      )
+                    ]),
+                    const SizedBox(height: 20),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: PieChart(
+                        slices: data.pieSlices,
+                        totalIncome: data.totalTrackedIncome,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Divider(),
+                    _buildDashboardSection(
+                      title: 'Income',
+                      categories: data.incomeCategories,
+                      budgetMap: data.budgetMap,
+                      trackedTotals: data.trackedTotals,
+                      totalBudgeted: data.totalBudgetedIncome,
+                      totalTracked: data.totalTrackedIncome,
+                      sectionColour: theme.income,
+                    ),
+                    _buildDashboardSection(
+                      title: 'Expenses',
+                      categories: data.expenseCategories,
+                      budgetMap: data.budgetMap,
+                      trackedTotals: data.trackedTotals,
+                      totalBudgeted: data.totalBudgetedExpenses,
+                      totalTracked: data.totalTrackedExpenses,
+                      sectionColour: theme.expense,
+                    ),
+                    _buildDashboardSection(
+                      title: 'Savings',
+                      categories: data.savingCategories,
+                      budgetMap: data.budgetMap,
+                      trackedTotals: data.trackedTotals,
+                      totalBudgeted: data.totalBudgetedSavings,
+                      totalTracked: data.totalTrackedSavings,
+                      sectionColour: theme.savings,
+                    ),
+                    _buildDashboardSection(
+                      title: 'Investments',
+                      categories: data.investmentCategories,
+                      budgetMap: data.budgetMap,
+                      trackedTotals: data.trackedTotals,
+                      totalBudgeted: data.totalBudgetedInvestments,
+                      totalTracked: data.totalTrackedInvestments,
+                      sectionColour: theme.investment,
+                    ),
+        ],
+
+      );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+
+
+
+
+
   }
 
   // Helper to generate pie chart slices with shaded colors.
@@ -52,252 +160,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
     return slices;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context).extension<FinancialThemeExtension>()!;
-
-    return Scaffold(
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(
-              left: 8,
-              right: 8,
-              top: 48,
-              bottom: 8,
-            ),
-            child: PeriodSelector(
-              selectedPeriod: _currentPeriod,
-              onPeriodChanged: _handlePeriodChange,
-            ),
-          ),
-          const Divider(height: 1),
-
-          Expanded(
-            child: StreamBuilder<List<BudgetCategory>>(
-              stream: dataRepository.watchAllBudgetCategories(),
-              builder: (context, categoriesSnapshot) {
-                return StreamBuilder<List<BudgetPeriod>>(
-                  stream: dataRepository.watchBudgetPeriodsForMonth(
-                    _currentPeriod,
-                  ),
-                  builder: (context, periodsSnapshot) {
-                    return StreamBuilder<List<Transaction>>(
-                      stream: dataRepository.watchAllTransactions(),
-                      builder: (context, transactionsSnapshot) {
-                        if (!categoriesSnapshot.hasData ||
-                            !periodsSnapshot.hasData ||
-                            !transactionsSnapshot.hasData) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-
-                        // --- Data Processing ---
-                        final allCategories = categoriesSnapshot.data!;
-                        final budgetPeriods = periodsSnapshot.data!;
-                        final budgetMap = {
-                          for (var p in budgetPeriods)
-                            p.categoryId: p.budgetedAmount,
-                        };
-
-                        final periodTransactions =
-                            transactionsSnapshot.data!.where((t) {
-                              return t.date.year == _currentPeriod.year &&
-                                  t.date.month == _currentPeriod.month;
-                            }).toList();
-
-                        final Map<int, double> trackedTotals = {};
-                        for (var transaction in periodTransactions) {
-                          trackedTotals.update(
-                            transaction.categoryId,
-                            (value) => value + transaction.amount,
-                            ifAbsent: () => transaction.amount,
-                          );
-                        }
-
-                        // --- Generate Pie Chart Slices & Calculate Totals ---
-                        final incomeCategories =
-                            allCategories
-                                .where((c) => c.type == Types.income)
-                                .toList();
-                        final expenseCategories =
-                            allCategories
-                                .where((c) => c.type == Types.expense)
-                                .toList();
-                        final savingCategories =
-                            allCategories
-                                .where((c) => c.type == Types.saving)
-                                .toList();
-                        final investmentCategories =
-                            allCategories
-                                .where((c) => c.type == Types.investment)
-                                .toList();
-
-                        // --- THIS IS THE KEY CHANGE ---
-                        // Sort each list by the tracked total in descending order.
-                        incomeCategories.sort(
-                          (a, b) => (trackedTotals[b.id] ?? 0.0).compareTo(
-                            trackedTotals[a.id] ?? 0.0,
-                          ),
-                        );
-                        expenseCategories.sort(
-                          (a, b) => (trackedTotals[b.id] ?? 0.0).compareTo(
-                            trackedTotals[a.id] ?? 0.0,
-                          ),
-                        );
-                        savingCategories.sort(
-                          (a, b) => (trackedTotals[b.id] ?? 0.0).compareTo(
-                            trackedTotals[a.id] ?? 0.0,
-                          ),
-                        );
-                        investmentCategories.sort(
-                          (a, b) => (trackedTotals[b.id] ?? 0.0).compareTo(
-                            trackedTotals[a.id] ?? 0.0,
-                          ),
-                        );
-
-                        final totalTrackedIncomeForPie = incomeCategories.fold(
-                          0.0,
-                          (sum, cat) => sum + (trackedTotals[cat.id] ?? 0.0),
-                        );
-
-                        final List<PieSlice> allSlices = [];
-                        allSlices.addAll(
-                          _generateSlicesForType(
-                            categories: expenseCategories,
-                            totals: trackedTotals,
-                            baseColor: theme.expense,
-                          ),
-                        );
-                        allSlices.addAll(
-                          _generateSlicesForType(
-                            categories: savingCategories,
-                            totals: trackedTotals,
-                            baseColor: theme.savings,
-                          ),
-                        );
-                        allSlices.addAll(
-                          _generateSlicesForType(
-                            categories: investmentCategories,
-                            totals: trackedTotals,
-                            baseColor: theme.investment,
-                          ),
-                        );
-
-                        // Calculate total budgeted/tracked amounts for each type for the list view
-                        final totalTrackedIncome = incomeCategories.fold(
-                          0.0,
-                          (sum, cat) => sum + (trackedTotals[cat.id] ?? 0.0),
-                        );
-                        final totalBudgetedIncome = incomeCategories.fold(
-                          0.0,
-                          (sum, cat) => sum + (budgetMap[cat.id] ?? 0.0),
-                        );
-                        final totalTrackedExpenses = expenseCategories.fold(
-                          0.0,
-                          (sum, cat) => sum + (trackedTotals[cat.id] ?? 0.0),
-                        );
-                        final totalBudgetedExpenses = expenseCategories.fold(
-                          0.0,
-                          (sum, cat) => sum + (budgetMap[cat.id] ?? 0.0),
-                        );
-                        final totalTrackedSavings = savingCategories.fold(
-                          0.0,
-                          (sum, cat) => sum + (trackedTotals[cat.id] ?? 0.0),
-                        );
-                        final totalBudgetedSavings = savingCategories.fold(
-                          0.0,
-                          (sum, cat) => sum + (budgetMap[cat.id] ?? 0.0),
-                        );
-                        final totalTrackedInvestments = investmentCategories
-                            .fold(
-                              0.0,
-                              (sum, cat) =>
-                                  sum + (trackedTotals[cat.id] ?? 0.0),
-                            );
-                        final totalBudgetedInvestments = investmentCategories
-                            .fold(
-                              0.0,
-                              (sum, cat) => sum + (budgetMap[cat.id] ?? 0.0),
-                            );
-
-                        return ListView(
-                          padding: const EdgeInsets.all(8.0),
-                          children: [
-                            const SizedBox(height: 10),
-                            const Text(
-                              'Spending Breakdown',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0,
-                              ),
-                              child: PieChart(
-                                slices: allSlices,
-                                totalIncome: totalTrackedIncomeForPie,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            const Divider(),
-
-                            // --- List View Sections ---
-                            _buildDashboardSection(
-                              title: 'Income',
-                              categories: incomeCategories,
-                              budgetMap: budgetMap,
-                              trackedTotals: trackedTotals,
-                              totalBudgeted: totalBudgetedIncome,
-                              totalTracked: totalTrackedIncome,
-                              sectionColour: theme.income,
-                            ),
-                            _buildDashboardSection(
-                              title: 'Expenses',
-                              categories: expenseCategories,
-                              budgetMap: budgetMap,
-                              trackedTotals: trackedTotals,
-                              totalBudgeted: totalBudgetedExpenses,
-                              totalTracked: totalTrackedExpenses,
-                              sectionColour: theme.expense,
-                            ),
-                            _buildDashboardSection(
-                              title: 'Savings',
-                              categories: savingCategories,
-                              budgetMap: budgetMap,
-                              trackedTotals: trackedTotals,
-                              totalBudgeted: totalBudgetedSavings,
-                              totalTracked: totalTrackedSavings,
-                              sectionColour: theme.savings,
-                            ),
-                            _buildDashboardSection(
-                              title: 'Investments',
-                              categories: investmentCategories,
-                              budgetMap: budgetMap,
-                              trackedTotals: trackedTotals,
-                              totalBudgeted: totalBudgetedInvestments,
-                              totalTracked: totalTrackedInvestments,
-                              sectionColour: theme.investment,
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   // This helper widget to build each section remains the same
